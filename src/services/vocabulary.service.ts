@@ -79,7 +79,6 @@ class VocabularyService {
      * Thêm 1 hoặc nhiều flashcard vào bộ
      */
     addFlashCards = async (setId: string, dto: AddFlashCardsReqDto) => {
-
         // 1️⃣ Kiểm tra trùng trong payload
         const lowerTerms = dto.cards.map(c => c.term.trim().toLowerCase());
         const duplicates = lowerTerms.filter((t, i) => lowerTerms.indexOf(t) !== i);
@@ -90,43 +89,53 @@ class VocabularyService {
             );
         }
 
-        // 2️⃣ Lấy bộ hiện có
-        const existing = await VocabularySetModel.findById(setId).select("cards.term").lean();
+        // 2 Lấy bộ hiện có
+        const existing = await VocabularySetModel.findById(setId)
+            .select("cards.term")
+            .lean();
         if (!existing) throw AppError.notFoundError("Bộ flashcard không tồn tại");
 
         const existingTerms = new Set(existing.cards.map(c => c.term.trim().toLowerCase()));
 
-        // 3️⃣ Sinh nội dung Gemini cho từng từ mới
-        const newDocs = [];
-        for (const card of dto.cards) {
-            const term = card.term.trim();
-            if (!term || existingTerms.has(term.toLowerCase())) continue;
+        // 3️ Xử lý các từ mới
+        const newTerms = dto.cards.filter(c => {
+            const term = c.term.trim();
+            return term && !existingTerms.has(term.toLowerCase());
+        });
 
-            const mainMeaning = (card.mainMeaning || "").trim();
-            const llmData = await getGeminiContent(term, mainMeaning);
-
-            // (tuỳ chọn) gọi Azure để tạo file audio
-            const audioUS_url = await getAzureTTS(term, "en-US");
-            const audioUK_url = await getAzureTTS(term, "en-GB");
-
-            newDocs.push({
-                _id: new mongoose.Types.ObjectId(),
-                term,
-                mainMeaning,
-                ipa: llmData.ipa,
-                collocations: llmData.collocations,
-                example: llmData.examples[0],
-                audioUS_url,
-                audioUK_url,
-            });
-
-            existingTerms.add(term.toLowerCase());
-        }
-
-        if (!newDocs.length)
+        if (newTerms.length === 0)
             throw AppError.conflictError("Không có từ mới để thêm.");
 
-        // 4️⃣ Push vào DB
+        // 4️ Sinh nội dung song song (Gemini + TTS)
+        const newDocs = await Promise.all(
+            newTerms.map(async (card) => {
+                const term = card.term.trim();
+                const mainMeaning = (card.mainMeaning || "").trim();
+
+                const llmData = await getGeminiContent(term, mainMeaning);
+
+                // chạy Azure TTS song song cho 2 giọng
+                const [audioUS_url, audioUK_url] = await Promise.all([
+                    getAzureTTS(term, "en-US"),
+                    getAzureTTS(term, "en-GB"),
+                ]);
+
+                existingTerms.add(term.toLowerCase());
+
+                return {
+                    _id: new mongoose.Types.ObjectId(),
+                    term,
+                    mainMeaning,
+                    ipa: llmData.ipa,
+                    collocations: llmData.collocations,
+                    example: llmData.examples[0],
+                    audioUS_url,
+                    audioUK_url,
+                };
+            })
+        );
+
+        // 5️ Push vào DB
         const updated = await VocabularySetModel.findByIdAndUpdate(
             setId,
             { $push: { cards: { $each: newDocs } } },
@@ -139,10 +148,15 @@ class VocabularyService {
         return {
             set_id: updated._id,
             addedCount: newDocs.length,
-            newCards: newDocs.map(c => ({ _id: c._id, term: c.term, mainMeaning: c.mainMeaning })),
+            newCards: newDocs.map(c => ({
+                _id: c._id,
+                term: c.term,
+                mainMeaning: c.mainMeaning,
+            })),
             totalCards: updated.cards.length,
         };
     };
+
     /**
      * Xóa 1 hoặc nhiều flashcard trong bộ
      */

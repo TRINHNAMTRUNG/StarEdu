@@ -52,11 +52,6 @@ const parsed = envSchema.safeParse({
     RT_SECRET: process.env.RT_SECRET,
     RT_EXPIRES_IN: process.env.RT_EXPIRES_IN,
 
-    BUCKET_NAME: process.env.BUCKET_NAME,
-    BUCKET_REGION: process.env.BUCKET_REGION,
-    ACCESS_KEY_IAM: process.env.ACCESS_KEY_IAM,
-    SECRET_ACCESS_KEY_IAM: process.env.SECRET_ACCESS_KEY_IAM,
-
     INFOBIP_API_KEY: process.env.INFOBIP_API_KEY,
     INFOBIP_BASE_URL: process.env.INFOBIP_BASE_URL,
     INFOBIP_APP_ID: process.env.INFOBIP_APP_ID,

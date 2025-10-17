@@ -31,19 +31,19 @@ export class SetIdParamDto {
     setId!: string;
 }
 
-export class FlashCardInputDto {
+export class FlashCardItemDto {
+    @IsNotEmpty()
     @IsString()
-    @IsNotEmpty({ message: "term không được để trống" })
     term!: string;
 
+    @IsNotEmpty()
     @IsString()
-    @IsNotEmpty({ message: "mainMeaning không được để trống" })
     mainMeaning!: string;
 }
 
 export class AddFlashCardsReqDto {
-    @IsArray({ message: "cards phải là một mảng" })
+    @IsArray()
     @ValidateNested({ each: true })
-    @Type(() => FlashCardInputDto)
-    cards!: FlashCardInputDto[];
+    @Type(() => FlashCardItemDto)
+    cards!: FlashCardItemDto[];
 }

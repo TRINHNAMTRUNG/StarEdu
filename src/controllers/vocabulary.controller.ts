@@ -57,7 +57,7 @@ class VocabularyController {
 
     // Thêm flashcard vào bộ
     addFlashCards = asyncHandler(async (req: Request, res: Response) => {
-        const dto = plainToInstance(AddFlashCardsReqDto, req.body, { excludeExtraneousValues: true });
+        const dto: AddFlashCardsReqDto = req.body; // Không cần plainToInstance vì validation middleware đã xử lý
         const result = await this.vocabularyService.addFlashCards(req.params.setId, dto);
 
         const response = instanceToPlain(

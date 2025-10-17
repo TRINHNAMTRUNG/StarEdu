@@ -50,8 +50,8 @@ export async function getAzureTTS(word: string, voiceCode: 'en-GB' | 'en-US'): P
 
         const audioBuffer = Buffer.from(ttsResponse.data);
 
-        // 2. Tải lên Amazon S3
-        const blobName = `audios/${word}/${word}_${voiceCode}_${uuidv4()}.mp3`;
+        // 2. Tạo key đơn giản: audios/vocabulary/{word}_{voiceCode}_{uuid}.mp3
+        const blobName = `audios/vocabulary/${word}_${voiceCode}_${uuidv4()}.mp3`;
 
         const command = new PutObjectCommand({
             Bucket: AWS_S3_BUCKET_NAME,
