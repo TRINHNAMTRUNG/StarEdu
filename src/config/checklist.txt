@@ -1,0 +1,10 @@
+complete:
+create acc teacher //admin
+login teacher //teacher
+
+create acc student //student
+verify otp student //student
+login student //student
+
+create acc admin //admin
+login admin //admin
