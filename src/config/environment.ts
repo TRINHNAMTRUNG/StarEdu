@@ -14,11 +14,6 @@ const envSchema = z.object({
     AT_EXPIRES_IN: z.string().min(1),
     RT_EXPIRES_IN: z.string().min(1),
 
-    BUCKET_NAME: z.string().min(1),
-    BUCKET_REGION: z.string().min(1),
-    ACCESS_KEY_IAM: z.string().min(1),
-    SECRET_ACCESS_KEY_IAM: z.string().min(1),
-
     // TWILIO_ACCOUNT_SID: z.string().min(1),
     // TWILIO_AUTH_TOKEN: z.string().min(1),
     // TWILIO_PHONE_NUMBER: z.string().regex(/^\+84\d{9}$/),
