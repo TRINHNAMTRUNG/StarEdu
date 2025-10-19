@@ -77,6 +77,7 @@ export async function getGeminiContent(
         let data: LLMResponse;
         try {
             data = JSON.parse(jsonString) as LLMResponse;
+            console.log("Gemini response:", data);
         } catch {
             throw AppError.internalServerError("Lỗi khi phân tích phản hồi từ Gemini.");
         }

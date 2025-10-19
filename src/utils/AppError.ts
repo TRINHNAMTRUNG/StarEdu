@@ -77,6 +77,10 @@ abstract class AppError extends Error {
         Error.captureStackTrace(this, this.constructor);
     };
 
+    static gatewayTimeout(message: string, requestId?: string): GatewayTimeoutError {
+        return new GatewayTimeoutError(message, requestId);
+    }
+
     static badRequestError(message: string, requestId?: string): BadRequestError {
         return new BadRequestError(message, requestId);
     }
@@ -113,6 +117,21 @@ abstract class AppError extends Error {
             requestId: this.requestId,
             timestamp: this.timestamp.toISOString(),
         };
+    }
+}
+
+export class GatewayTimeoutError extends AppError {
+    constructor(
+        message: string,
+        requestId?: string
+    ) {
+        super(
+            message,
+            504,
+            "GATEWAY_TIMEOUT",
+            true,
+            requestId
+        );
     }
 }
 

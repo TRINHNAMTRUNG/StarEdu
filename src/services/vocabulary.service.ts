@@ -79,7 +79,7 @@ class VocabularyService {
      * Thêm 1 hoặc nhiều flashcard vào bộ
      */
     addFlashCards = async (setId: string, dto: AddFlashCardsReqDto) => {
-        // 1️⃣ Kiểm tra trùng trong payload
+        // 1️ Kiểm tra trùng trong payload
         const lowerTerms = dto.cards.map(c => c.term.trim().toLowerCase());
         const duplicates = lowerTerms.filter((t, i) => lowerTerms.indexOf(t) !== i);
         if (duplicates.length > 0) {
@@ -134,7 +134,7 @@ class VocabularyService {
                 };
             })
         );
-
+        console.log("New documents created:", newDocs);
         // 5️ Push vào DB
         const updated = await VocabularySetModel.findByIdAndUpdate(
             setId,
@@ -146,10 +146,11 @@ class VocabularyService {
             throw AppError.internalServerError("Thêm flashcard thất bại.");
 
         return {
-            set_id: updated._id,
+            set_id: updated._id.toString(), // Chuyển sang string
+            course_id: updated.course_id.toString(), // Chuyển sang string
             addedCount: newDocs.length,
             newCards: newDocs.map(c => ({
-                _id: c._id,
+                _id: c._id.toString(), // Chuyển sang string
                 term: c.term,
                 mainMeaning: c.mainMeaning,
             })),

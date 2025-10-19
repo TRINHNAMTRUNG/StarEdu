@@ -18,13 +18,17 @@ export class AddFlashCardsResDto {
     set_id!: string;
 
     @Expose()
+    course_id!: string;
+
+    @Expose()
     addedCount!: number;
 
     @Expose()
     @Type(() => FlashCardResDto)
     newCards!: FlashCardResDto[];
 
-    @Expose() totalCards!: number;
+    @Expose()
+    totalCards!: number;
 }
 
 export class VocabularySetResDto {
