@@ -1,13 +1,21 @@
-import mongoose, { Schema, Model, InferSchemaType } from "mongoose";
+import mongoose, { Schema, InferSchemaType } from "mongoose";
 
+export enum CertificationType {
+    IELTS = "ielts",
+    TOEIC = "toeic",
+    TOEFL = "toefl",
+}
 
 const CertificationSchema = new Schema({
-    title: { type: String, required: true },
+    name: { type: String, required: true },
+    type: { type: String, enum: Object.values(CertificationType), required: true },
     description: { type: String },
-    thumbnail: { type: String }
+    issuer: { type: String, required: true },
+    validityPeriod: { type: Number }, // Thời hạn hiệu lực (tháng)
+    passingScore: { type: Number }, // Điểm đạt
 }, { timestamps: true, collection: "certifications" });
 
-
 export type ICertification = InferSchemaType<typeof CertificationSchema>;
-const CertificationModel: Model<ICertification> = mongoose.model<ICertification>("Certification", CertificationSchema);
+const CertificationModel = mongoose.model<ICertification>("Certification", CertificationSchema);
+
 export default CertificationModel;

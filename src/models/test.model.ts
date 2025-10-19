@@ -1,15 +1,16 @@
-import mongoose, { Schema, Model, InferSchemaType } from "mongoose";
+import { Schema, model, Types } from "mongoose";
 
-
-const TestSchema = new Schema({
-    type: { type: String },
-    title: { type: String, required: true },
-    topicSet_id: { type: Schema.Types.ObjectId, ref: "TopicSet" },
-    description: { type: String },
-    questions: { type: [Schema.Types.ObjectId], ref: "Question", default: [] }
+const testSchema = new Schema({
+    title: { type: String, required: true },          // ETS 2020 Practice Test 1
+    year: { type: Number },
+    source: { type: String, default: "ETS" },
+    audioUrl: { type: String },
+    parts: [
+        {
+            partNumber: { type: Number },
+            questionIds: [{ type: Types.ObjectId, ref: "Question" }]
+        }
+    ]
 }, { timestamps: true, collection: "tests" });
 
-
-export type ITest = InferSchemaType<typeof TestSchema>;
-const TestModel: Model<ITest> = mongoose.model<ITest>("Test", TestSchema);
-export default TestModel;
+export const TestModel = model("Test", testSchema);

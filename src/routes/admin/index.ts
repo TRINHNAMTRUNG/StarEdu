@@ -1,14 +1,14 @@
-
 import { Router } from "express";
 import adminAuthRoutes from "./auth.routes";
 import adminTeacherRoutes from "./teacher.routes";
 import adminVocabularyRoutes from "./vocabulary.routes";
+import adminCertificationRoutes from "./certification.routes";
 
 const adminRouter = Router();
 
 adminRouter.use("/auth", adminAuthRoutes);
 adminRouter.use("/teachers", adminTeacherRoutes);
 adminRouter.use("/vocabulary", adminVocabularyRoutes);
-
+adminRouter.use("/certifications", adminCertificationRoutes);
 
 export default adminRouter;
