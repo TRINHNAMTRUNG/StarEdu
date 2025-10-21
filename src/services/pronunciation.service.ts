@@ -1,3 +1,7 @@
+// ======================================
+// File: src/services/azurePronunciation.service.ts
+// ======================================
+
 import * as speechsdk from "microsoft-cognitiveservices-speech-sdk";
 import { Buffer } from "buffer";
 import AppError from "../utils/AppError";
@@ -7,151 +11,329 @@ import ffmpegInstaller from "@ffmpeg-installer/ffmpeg";
 import { tmpdir } from "os";
 import { writeFileSync, readFileSync, unlinkSync } from "fs";
 import path from "path";
+
+// Cấu hình đường dẫn ffmpeg
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
-/**
- * AzurePronunciationService
- * - Azure Speech SDK tự quản lý token khi dùng SpeechConfig.fromSubscription(key, region).
- * - Audio ideal: WAV/PCM 16kHz, 16-bit, mono. Nếu FE gửi khác (44.1kHz...), cần convert trước.
- */
+
+/* ===================== */
+/* Interfaces dữ liệu trả về từ Azure */
+/* ===================== */
+
+interface RawNBestPhoneme {
+    Phoneme: string;
+    Score: number;
+}
+
+interface RawPhoneme {
+    Phoneme: string;
+    PronunciationAssessment?: {
+        AccuracyScore?: number;
+        NBestPhonemes?: RawNBestPhoneme[];
+    };
+    Offset?: number;
+    Duration?: number;
+}
+
+interface RawSyllable {
+    Syllable: string;
+    Grapheme?: string;
+    PronunciationAssessment?: { AccuracyScore?: number };
+    Offset?: number;
+    Duration?: number;
+}
+
+interface RawWord {
+    Word: string;
+    Offset?: number;
+    Duration?: number;
+    PronunciationAssessment?: { AccuracyScore?: number };
+    Syllables?: RawSyllable[];
+    Phonemes?: RawPhoneme[];
+}
+
+interface RawNBest {
+    PronunciationAssessment?: {
+        AccuracyScore?: number;
+        FluencyScore?: number;
+        CompletenessScore?: number;
+        PronScore?: number;
+    };
+    Words?: RawWord[];
+}
+
+interface RawAzureResponse {
+    NBest?: RawNBest[];
+}
+
+/* ===================== */
+/* Output chuẩn hóa trả về cho FE/DB */
+/* ===================== */
+
+interface OutputPhoneme {
+    target: string; // âm chuẩn IPA
+    accuracy: number; // điểm chính xác 0-100
+    result: "perfect" | "near_correct" | "medium" | "wrong"; // phân loại
+    altPh?: string; // âm người dùng nói khác target
+    diff?: number; // độ khác biệt giữa target và alt
+    feedback: string; // lời khuyên
+    NBestPhonemes?: RawNBestPhoneme[]; // giữ nguyên mảng gốc để debug
+}
+
+interface OutputSyllable {
+    ipa: string; // âm IPA của âm tiết
+    grapheme?: string; // chữ viết
+    accuracy: number; // điểm trung bình của âm tiết
+    phonemes: OutputPhoneme[];
+}
+
+interface NormalizedResult {
+    word: string; // từ
+    scores: {
+        accuracy: number | null;
+        fluency: number | null;
+        completeness: number | null;
+        overall: number | null;
+    };
+    syllables: OutputSyllable[];
+}
+
+/* ===================== */
+/* Rule Map IPA → cách phát âm */
+/* ===================== */
+
+// Chỉ giữ hướng dẫn phát âm, không so sánh với âm khác
+const IPA_RULE_MAP: Record<string, string> = {
+    p: "Bật hơi mạnh hơn, không rung cổ họng.",
+    b: "Thêm rung nhẹ ở cổ họng.",
+    t: "Không rung cổ họng, bật hơi mạnh hơn.",
+    d: "Thêm rung cổ họng để khác /t/.",
+    k: "Không rung cổ họng, bật hơi mạnh hơn.",
+    g: "Thêm rung cổ họng khi phát âm.",
+    f: "Cắn nhẹ môi dưới vào răng trên khi phát âm.",
+    v: "Thêm rung cổ họng khi phát âm.",
+    θ: "Đưa lưỡi ra giữa hai hàm răng, thổi nhẹ.",
+    ð: "Giữ lưỡi giữa hai răng và rung cổ họng.",
+    s: "Giữ luồng hơi hẹp, rõ nét.",
+    "ʃ": "Tròn môi nhẹ, đẩy hơi dài.",
+    z: "Thêm rung cổ họng khi phát âm.",
+    "ʒ": "Thêm rung cổ họng, giữ lưỡi đúng vị trí.",
+    h: "Phát hơi nhẹ từ họng, không rung cổ họng.",
+    m: "Ngậm miệng, rung mũi khi phát âm.",
+    n: "Lưỡi chạm chân răng trên, hơi thoát qua mũi.",
+    "ŋ": "Nâng phần sau lưỡi lên.",
+    l: "Đặt đầu lưỡi chạm nhẹ nướu.",
+    r: "Cuộn đầu lưỡi nhẹ vào trong.",
+    w: "Làm tròn môi, không cắn môi.",
+    j: "Đặt đầu lưỡi gần vòm họng, phát âm nhẹ nhàng.",
+    "ʧ": "Thêm bật hơi nhẹ trước /ʃ/.",
+    "ʤ": "Thêm rung cổ họng.",
+    i: "Căng môi hơn, kéo dài âm.",
+    ɪ: "Thả lỏng môi, âm ngắn.",
+    e: "Hạ hàm ít hơn, tạo âm giữa /æ/ và /ɪ/.",
+    æ: "Hạ hàm nhiều hơn, mở miệng rộng.",
+    ʌ: "Giữ miệng mở, phát âm mạnh hơn.",
+    ə: "Giảm lực, nhẹ giọng hơn.",
+    ɑ: "Mở rộng miệng, hạ hàm sâu.",
+    ɔ: "Tròn môi hơn.",
+    ɒ: "Không tròn môi, mở rộng miệng.",
+    ʊ: "Rút lưỡi về sau.",
+    u: "Kéo dài âm, tròn môi hơn.",
+    ɜ: "Giữ lưỡi giữa, phát âm dài hơn.",
+    eɪ: "Kéo dài âm, kết thúc bằng âm /ɪ/ nhẹ.",
+    aɪ: "Kéo âm lên cao thành /ɪ/ ở cuối.",
+    ɔɪ: "Kết thúc bằng âm /ɪ/ ngắn, tròn môi nhẹ.",
+    aʊ: "Kéo về phía sau và tròn môi để tạo /ʊ/ ở cuối.",
+    oʊ: "Bắt đầu tròn môi nhẹ và kết thúc bằng /ʊ/.",
+    eə: "Kéo dài âm và thêm nhẹ /ə/ ở cuối.",
+    ɪə: "Kéo dài âm và thêm /ə/ nhẹ ở cuối.",
+    ʊə: "Giữ âm dài, mở nhẹ miệng về /ə/."
+};
+
+/* ===================== */
+/* Phân loại kết quả âm theo điểm */
+/* ===================== */
+const PERFECT = 95;
+const LIGHT = 5;
+const MEDIUM = 10;
+
+const classifyDiff = (diff: number) =>
+    diff < LIGHT ? "near_correct" : diff < MEDIUM ? "medium" : "wrong";
+
+/* ===================== */
+/* Tạo feedback cho 1 phoneme */
+/* ===================== */
+function makeFeedback(target: string, alt: string | undefined, diff: number | undefined, result: string): string {
+    const rule = IPA_RULE_MAP[target];
+    if (result === "perfect") return `Phát âm /${target}/ rất tốt. ${rule ?? ""}`;
+    if (result === "near_correct") return `Âm /${target}/ hơi đúng. ${rule ?? ""}`;
+    if (result === "medium") return `Âm /${target}/ cần luyện thêm. ${rule ?? ""}`;
+    // Nếu phát âm sai hoàn toàn
+    return `Bạn đang nói /${alt ?? "?"}/ thay vì /${target}/. ${rule ?? ""}`;
+}
+
+/* ===================== */
+/* Phân tích 1 phoneme → feedback, giữ NBestPhonemes để debug */
+/* ===================== */
+function analyzePhoneme(p: RawPhoneme): OutputPhoneme {
+    const target = p.Phoneme;
+    const accuracy = p.PronunciationAssessment?.AccuracyScore ?? 0;
+    const nbest = p.PronunciationAssessment?.NBestPhonemes ?? [];
+
+    if (accuracy >= PERFECT) {
+        return {
+            target,
+            accuracy,
+            result: "perfect",
+            feedback: `Phát âm /${target}/ rất tốt.`,
+            NBestPhonemes: nbest
+        };
+    }
+
+    if (!nbest.length) {
+        return {
+            target,
+            accuracy,
+            result: "wrong",
+            feedback: "Cần cải thiện phát âm.",
+            NBestPhonemes: []
+        };
+    }
+
+    const sorted = [...nbest].sort((a, b) => b.Score - a.Score);
+    const best = sorted[0];
+    const second = sorted[1];
+
+    let alt = best.Phoneme;
+    let diff = 0;
+
+    if (best.Phoneme === target) {
+        // nếu phoneme đúng, diff so với phoneme cao thứ 2
+        diff = second ? best.Score - second.Score : 0;
+        alt = second ? second.Phoneme : "";
+    } else {
+        // nếu phoneme sai, diff so với phoneme target trong NBest
+        const targetItem = sorted.find((s) => s.Phoneme === target);
+        diff = best.Score - (targetItem?.Score ?? 0);
+    }
+
+    const result = classifyDiff(Math.abs(diff));
+
+    // chỉ show rule khi alt khác target
+    const feedback =
+        alt && alt !== target
+            ? makeFeedback(target, alt, Math.round(diff), result)
+            : makeFeedback(target, "", undefined, result);
+
+    return {
+        target,
+        accuracy,
+        result,
+        altPh: alt !== target ? alt : undefined,
+        diff: alt !== target ? Math.round(diff) : undefined,
+        feedback,
+        NBestPhonemes: nbest
+    };
+}
+
+
+/* ===================== */
+/* Service chính AzurePronunciationService */
+/* ===================== */
 class AzurePronunciationService {
-    private speechConfig: speechsdk.SpeechConfig;
-    // Mặc định timeout cho 1 request tới Azure (ms). Có thể expose thành param nếu cần.
-    private readonly REQUEST_TIMEOUT_MS = 30_000;
+    private readonly speechConfig: speechsdk.SpeechConfig;
+    private readonly TIMEOUT = 30_000; // 30 giây timeout
 
     constructor() {
         const { AZURE_SPEECH_KEY, AZURE_SPEECH_REGION } = ENV;
-        if (!AZURE_SPEECH_KEY || !AZURE_SPEECH_REGION) {
-            // Nếu thiếu config, throw ngay để dev biết cấu hình chưa setup
-            throw AppError.internalServerError("Missing Azure Speech configuration (key/region).");
-        }
-
-        // Tạo chung SpeechConfig dùng cho mọi request của instance này.
-        // SDK sẽ tự request token/refresh token nội bộ.
+        if (!AZURE_SPEECH_KEY || !AZURE_SPEECH_REGION)
+            throw AppError.internalServerError("Thiếu cấu hình Azure Speech.");
         this.speechConfig = speechsdk.SpeechConfig.fromSubscription(AZURE_SPEECH_KEY, AZURE_SPEECH_REGION);
-
-        // Ngôn ngữ nhận dạng, đổi nếu muốn (ví dụ: "en-GB" hoặc "vi-VN")
         this.speechConfig.speechRecognitionLanguage = "en-US";
-
-        // (Tùy chọn) có thể set thêm timeout silence, logs, v.v.:
-        // this.speechConfig.enableAudioLogging(); // bật nếu muốn Azure lưu audio logs (debug)
     }
 
-    /**
-     * assess
-     *
-     * - Input:
-     *    audioBuffer: Buffer chứa file WAV/PCM upload từ FE.
-     *    referenceText: string - câu / đoạn cần so sánh (người dùng phải đọc).
-     * - Output: Promise<any> - JSON trả về của Azure Pronunciation Assessment (parsed).
-     *
-     * Hành vi:
-     * - Chuẩn bị audio stream từ buffer, tạo recognizer, apply pronunciation config,
-     *   gọi Azure (recognizeOnceAsync), xử lý events, timeout, cleanup recognizer.
-     */
-    public async assess(audioBuffer: Buffer, referenceText: string): Promise<any> {
-        // Validate input sớm
-        if (!audioBuffer || !Buffer.isBuffer(audioBuffer) || audioBuffer.length === 0) {
-            throw AppError.badRequestError("AudioBuffer thiếu hoặc không hợp lệ.");
-        }
-        if (!referenceText || typeof referenceText !== "string" || !referenceText.trim()) {
-            throw AppError.badRequestError("ReferenceText thiếu hoặc không hợp lệ.");
-        }
+    /* assess(): gọi Azure, chấm điểm và trả JSON chuẩn hóa */
+    public async assess(audio: Buffer, text: string): Promise<NormalizedResult> {
+        if (!audio?.length) throw AppError.badRequestError("AudioBuffer thiếu.");
+        if (!text?.trim()) throw AppError.badRequestError("ReferenceText thiếu.");
 
-        // 1) Tạo AudioConfig từ Buffer (Pull stream) - Azure SDK sẽ "kéo" dữ liệu
-        const fixedAudio = await this.ensurePCM16Mono16k(audioBuffer);
-        const audioConfig = this.createAudioConfigFromBuffer(fixedAudio);
+        const fixed = await this.ensurePCM16Mono16k(audio);
+        const audioConfig = this.createAudioConfigFromBuffer(fixed);
 
-        // 2) Tạo SpeechRecognizer cho request hiện tại
         const recognizer = new speechsdk.SpeechRecognizer(this.speechConfig, audioConfig);
-
-        // 3) Cấu hình PronunciationAssessment
-        //    - referenceText: đoạn tham chiếu
-        //    - gradingSystem: HundredMark => điểm 0-100
-        //    - granularity: Phoneme => chi tiết từng âm vị
-        //    - enableMiscue: true => phát hiện đọc thiếu / chèn
-        const pronunciationConfig = new speechsdk.PronunciationAssessmentConfig(
-            referenceText,
+        const config = new speechsdk.PronunciationAssessmentConfig(
+            text,
             speechsdk.PronunciationAssessmentGradingSystem.HundredMark,
             speechsdk.PronunciationAssessmentGranularity.Phoneme,
             true
         );
+        config.phonemeAlphabet = "IPA";
+        config.nbestPhonemeCount = 3;
+        config.applyTo(recognizer);
 
-        // (Optional) nếu muốn cấu hình thêm, ví dụ set IPA:
-        pronunciationConfig.phonemeAlphabet = "IPA";
-        pronunciationConfig.nbestPhonemeCount = 3;
+        return new Promise<NormalizedResult>((resolve, reject) => {
+            const timer = setTimeout(() => {
+                try { recognizer.close(); } catch { }
+                reject(AppError.internalServerError("Azure timeout."));
+            }, this.TIMEOUT);
 
-        // 4) Áp dụng cấu hình cho recognizer (bắt buộc để nhận assessment)
-        pronunciationConfig.applyTo(recognizer);
-
-        // 5) Chạy recognition theo pattern event-based + Promise
-        //    - Chúng ta dùng both events và recognizeOnceAsync vì SDK trả kết quả qua event
-        //    - Sử dụng timeout để tránh treo (defensive programming)
-        return new Promise<any>((resolve, reject) => {
-            // a) Timeout bảo vệ tổng request
-            const timeout = setTimeout(() => {
-                // Đóng recognizer, trả lỗi timeout
-                try { recognizer.close(); } catch (_) { /* ignore */ }
-                reject(AppError.internalServerError("Azure service timeout."));
-            }, this.REQUEST_TIMEOUT_MS);
-
-            // b) Handler khi có kết quả được recognized
-            recognizer.recognized = (_sender, ev: speechsdk.SpeechRecognitionEventArgs) => {
-                clearTimeout(timeout);
-                try { recognizer.close(); } catch (_) { /* ignore */ }
-
-                // ev.result.reason xem Azure trả gì
-                if (ev.result.reason === speechsdk.ResultReason.RecognizedSpeech) {
-                    // Kết quả assessment nằm trong property SpeechServiceResponse_JsonResult
-                    const jsonStr = ev.result.properties.getProperty(speechsdk.PropertyId.SpeechServiceResponse_JsonResult) ?? "{}";
+            recognizer.recognized = (_s, e) => {
+                clearTimeout(timer);
+                try { recognizer.close(); } catch { }
+                if (e.result.reason === speechsdk.ResultReason.RecognizedSpeech) {
                     try {
-                        const parsed = JSON.parse(jsonStr);
-                        resolve(parsed); // Trả kết quả parsed cho caller
-                    } catch (err) {
-                        // Nếu JSON không parse được => lỗi xử lý response
-                        reject(AppError.internalServerError("Failed to parse Azure response JSON."));
+                        const parsed: RawAzureResponse = JSON.parse(
+                            e.result.properties.getProperty(speechsdk.PropertyId.SpeechServiceResponse_JsonResult) ?? "{}"
+                        );
+                        resolve(this.normalize(parsed));
+                    } catch {
+                        reject(AppError.internalServerError("Parse Azure JSON lỗi."));
                     }
-                } else if (ev.result.reason === speechsdk.ResultReason.NoMatch) {
-                    // Không nhận dạng được giọng nói (âm thanh quá kém)
-                    reject(AppError.badRequestError("No speech recognized or audio quality too low."));
-                } else {
-                    // Trạng thái khác (bảo đảm bắt hết)
-                    reject(AppError.internalServerError("Unrecognized speech result state."));
-                }
+                } else reject(AppError.badRequestError("Không nhận diện được giọng nói."));
             };
 
-            // c) Handler cancel (lỗi service, authentication, network, etc.)
-            recognizer.canceled = (_sender, ev: speechsdk.SpeechRecognitionCanceledEventArgs) => {
-                clearTimeout(timeout);
-                try { recognizer.close(); } catch (_) { /* ignore */ }
-
-                // Lấy thông tin chi tiết hủy (nếu có)
-                const cancellation = speechsdk.CancellationDetails.fromResult((ev as any).result);
-                const detail = cancellation?.errorDetails ?? "Unknown cancellation reason";
-                // Map chi tiết thành AppError để controller xử lý thống nhất
-                reject(AppError.internalServerError(`Azure canceled: ${detail}`));
-            };
-
-            // d) Bắt đầu 1-shot recognition
-            //    - Result sẽ kích hoạt recognized/canceled events
-            recognizer.recognizeOnceAsync(
-                () => {
-                    // success callback body left empty because we use event handlers above
-                },
-                (err) => {
-                    clearTimeout(timeout);
-                    try { recognizer.close(); } catch (_) { /* ignore */ }
-                    reject(AppError.internalServerError(`Azure SDK error: ${String(err)}`));
-                }
-            );
+            recognizer.canceled = () => reject(AppError.internalServerError("Azure request bị hủy."));
+            recognizer.recognizeOnceAsync();
         });
     }
 
-    /** Convert audio về định dạng chuẩn Azure yêu cầu: PCM 16kHz, 16bit, mono */
-    private async ensurePCM16Mono16k(audioBuffer: Buffer): Promise<Buffer> {
+    /* Chuẩn hóa dữ liệu Azure → JSON dễ hiểu */
+    private normalize(raw: RawAzureResponse): NormalizedResult {
+        const best = raw.NBest?.[0];
+        const w = best?.Words?.[0];
+        const syllables = w?.Syllables ?? [];
+        const phonemes = w?.Phonemes ?? [];
+
+        const resultSyllables: OutputSyllable[] = syllables.map((syl) => {
+            const phs = phonemes.filter(
+                (p) => (p.Offset ?? 0) >= (syl.Offset ?? 0) &&
+                    (p.Offset ?? 0) < (syl.Offset ?? 0) + (syl.Duration ?? 0)
+            );
+            const analyzed = phs.map(analyzePhoneme);
+            return {
+                ipa: syl.Syllable,
+                grapheme: syl.Grapheme,
+                accuracy: syl.PronunciationAssessment?.AccuracyScore ?? 0,
+                phonemes: analyzed
+            };
+        });
+
+        return {
+            word: w?.Word ?? "",
+            scores: {
+                accuracy: best?.PronunciationAssessment?.AccuracyScore ?? null,
+                fluency: best?.PronunciationAssessment?.FluencyScore ?? null,
+                completeness: best?.PronunciationAssessment?.CompletenessScore ?? null,
+                overall: best?.PronunciationAssessment?.PronScore ?? null
+            },
+            syllables: resultSyllables
+        };
+    }
+
+    /* Convert audio → PCM 16kHz mono */
+    private async ensurePCM16Mono16k(buffer: Buffer): Promise<Buffer> {
         const input = path.join(tmpdir(), `input_${Date.now()}.wav`);
         const output = path.join(tmpdir(), `output_${Date.now()}.wav`);
-        writeFileSync(input, audioBuffer);
-
+        writeFileSync(input, buffer);
         return new Promise((resolve, reject) => {
             ffmpeg(input)
                 .audioCodec("pcm_s16le")
@@ -161,56 +343,30 @@ class AzurePronunciationService {
                 .save(output)
                 .on("end", () => {
                     const converted = readFileSync(output);
-                    unlinkSync(input);
-                    unlinkSync(output);
+                    unlinkSync(input); unlinkSync(output);
                     resolve(converted);
                 })
-                .on("error", (err) => {
-                    reject(AppError.internalServerError(`Audio conversion failed: ${err}`));
-                });
+                .on("error", (err) => reject(AppError.internalServerError(`Audio convert lỗi: ${err}`)));
         });
     }
 
-    /**
-     * createAudioConfigFromBuffer
-     *
-     * - Chuyển Node Buffer thành PullAudioInputStream mà Speech SDK hiểu.
-     * - SDK sẽ gọi callback.read nhiều lần để "kéo" dữ liệu.
-     *
-     * Tham số:
-     * - audioBuffer: Buffer (WAV/PCM). Nếu sample rate khác 16k, kết quả có thể không tốt.
-     *
-     * Trả về: speechsdk.AudioConfig
-     */
-    private createAudioConfigFromBuffer(audioBuffer: Buffer): speechsdk.AudioConfig {
-        let position = 0;
-
+    /* Biến Buffer → AudioConfig cho SDK */
+    private createAudioConfigFromBuffer(buffer: Buffer): speechsdk.AudioConfig {
+        let pos = 0;
         const callback: speechsdk.PullAudioInputStreamCallback = {
-            read: (arrayBuffer: ArrayBuffer): number => {
-                const view = new Uint8Array(arrayBuffer);
-                const remaining = audioBuffer.length - position;
-                const toCopy = Math.min(view.byteLength, remaining);
-
-                if (toCopy > 0) {
-                    view.set(audioBuffer.subarray(position, position + toCopy));
-                    position += toCopy;
-                    return toCopy;
-                }
-
-                // 0: end-of-stream
+            read: (arr: ArrayBuffer): number => {
+                const view = new Uint8Array(arr);
+                const remain = buffer.length - pos;
+                const bytes = Math.min(view.byteLength, remain);
+                if (bytes > 0) { view.set(buffer.subarray(pos, pos + bytes)); pos += bytes; return bytes; }
                 return 0;
             },
-            close: (): void => {
-                // Nếu cần cleanup resources native thì làm ở đây (hiếm cần)
-            }
+            close: () => { }
         };
-
-        // Định dạng audio input cho SDK: PCM Wave 16kHz, 16bit, mono.
-        // Nếu audioBuffer không phải WAV/PCM, bạn cần convert trước.
         const format = speechsdk.AudioStreamFormat.getWaveFormatPCM(16000, 16, 1);
-        const pullStream = speechsdk.AudioInputStream.createPullStream(callback, format);
-
-        return speechsdk.AudioConfig.fromStreamInput(pullStream);
+        const stream = speechsdk.AudioInputStream.createPullStream(callback, format);
+        return speechsdk.AudioConfig.fromStreamInput(stream);
     }
 }
+
 export default AzurePronunciationService;
