@@ -11,7 +11,6 @@ const SectionSchema = new Schema({
     test_id: { type: Schema.Types.ObjectId, ref: "Test" }
 }, { timestamps: true, collection: "sections" });
 
-
 export type ISection = InferSchemaType<typeof SectionSchema>;
 const SectionModel: Model<ISection> = mongoose.model<ISection>("Section", SectionSchema);
 export default SectionModel;
