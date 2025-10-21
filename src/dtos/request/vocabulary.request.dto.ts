@@ -1,5 +1,5 @@
 import { Type } from "class-transformer";
-import { IsString, IsNumber, IsArray, IsOptional, IsEnum, ValidateNested, IsNotEmpty, IsMongoId } from "class-validator";
+import { IsString, IsNumber, IsArray, IsOptional, IsEnum, ValidateNested, IsNotEmpty, IsMongoId, ArrayMaxSize, ArrayMinSize } from "class-validator";
 import { PartOfSpeech } from "../../models/vocabulary.model";
 
 export class CreateSetReqDto {
@@ -43,6 +43,8 @@ export class FlashCardItemDto {
 
 export class AddFlashCardsReqDto {
     @IsArray()
+    @ArrayMinSize(1, { message: "Phải có ít nhất 1 từ" })
+    @ArrayMaxSize(15, { message: "Chỉ được thêm tối đa 15 từ mỗi lần" })
     @ValidateNested({ each: true })
     @Type(() => FlashCardItemDto)
     cards!: FlashCardItemDto[];

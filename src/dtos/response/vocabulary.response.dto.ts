@@ -3,22 +3,27 @@ import { Schema } from "mongoose";
 
 export class FlashCardResDto {
     @Expose()
-    @Transform(({ value }) => value.toString())
-    _id!: string;
-    @Expose() term!: string;
-    @Expose() mainMeaning!: string;
-    @Expose() ipa!: string;
-    @Expose() collocations!: { phrase: string; meaning: string }[];
-    @Expose() examples!: string[];
+    _id!: string; // Đã convert trong service
+
+    @Expose()
+    term!: string;
+
+    @Expose()
+    mainMeaning!: string;
+
+    @Expose()
+    ipa!: string;
+
+    @Expose()
+    collocations!: { phrase: string; meaning: string }[];
+
+    @Expose()
+    examples!: string[];
 }
 
 export class AddFlashCardsResDto {
     @Expose()
-    @Transform(({ value }) => value.toString())
-    set_id!: string;
-
-    @Expose()
-    course_id!: string;
+    set_id!: string; // Đã convert sang string trong service
 
     @Expose()
     addedCount!: number;
@@ -33,12 +38,10 @@ export class AddFlashCardsResDto {
 
 export class VocabularySetResDto {
     @Expose()
-    @Transform(({ value }) => value.toString())
-    _id!: string;
+    _id!: string; // Đã convert trong service
 
     @Expose()
-    @Transform(({ value }) => value.toString())
-    course_id!: string;
+    course_id!: string; // Đã convert trong service
 
     @Expose()
     part_of_speech!: string;

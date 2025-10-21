@@ -3,7 +3,7 @@ import { injectable } from "tsyringe";
 import { asyncHandler } from "../middlewares/handleErorr.middleware";
 import VocabularyService from "../services/vocabulary.service";
 import { plainToInstance, instanceToPlain } from "class-transformer";
-import { VocabularySetResDto, VocabularySetListResDto, FlashCardResDto } from "../dtos/response/vocabulary.response.dto";
+import { VocabularySetResDto, VocabularySetListResDto, FlashCardResDto, AddFlashCardsResDto } from "../dtos/response/vocabulary.response.dto";
 import ResponseFormat from "../utils/ResponseFormat";
 import { CreateSetReqDto, AddFlashCardsReqDto } from "../dtos/request/vocabulary.request.dto";
 
@@ -57,11 +57,11 @@ class VocabularyController {
 
     // Thêm flashcard vào bộ
     addFlashCards = asyncHandler(async (req: Request, res: Response) => {
-        const dto: AddFlashCardsReqDto = req.body; // Không cần plainToInstance vì validation middleware đã xử lý
+        const dto: AddFlashCardsReqDto = req.body;
         const result = await this.vocabularyService.addFlashCards(req.params.setId, dto);
 
         const response = instanceToPlain(
-            plainToInstance(VocabularySetResDto, result, { excludeExtraneousValues: true })
+            plainToInstance(AddFlashCardsResDto, result, { excludeExtraneousValues: true })
         );
 
         return res.status(200).json(

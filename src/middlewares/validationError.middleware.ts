@@ -1,4 +1,3 @@
-
 import { validate, ValidationError } from "class-validator";
 import { NextFunction, Request, Response } from "express";
 import AppError, { ErrorDetailType } from "../utils/AppError";
@@ -73,8 +72,28 @@ export const log = (req: Request, res: Response, next: NextFunction) => {
     next();
 }
 
-export const validationBody = (DTOClass: new () => any) => {
-    return validateCore(DTOClass, ValidatorType.BODY);
+export const validationBody = (dtoClass: any) => {
+    return async (req: Request, res: Response, next: NextFunction) => {
+        const dtoInstance = plainToInstance(dtoClass, req.body, {
+            enableImplicitConversion: true,
+            excludeExtraneousValues: false
+        });
+
+        const errors = await validate(dtoInstance);
+
+        if (errors.length > 0) {
+            const formattedErrors = errors.map(err => ({
+                field: err.property,
+                value: err.value,
+                message: Object.values(err.constraints || {}).join(", ")
+            }));
+
+            return next(AppError.validationError("Dữ liệu không hợp lệ", formattedErrors));
+        }
+
+        req.body = dtoInstance;
+        next();
+    };
 };
 
 export const validationQuery = (DTOClass: new () => any) => {

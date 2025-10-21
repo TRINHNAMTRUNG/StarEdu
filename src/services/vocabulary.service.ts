@@ -3,9 +3,11 @@ import mongoose from "mongoose";
 import VocabularySetModel from "../models/vocabulary.model";
 import { CreateSetReqDto, AddFlashCardsReqDto } from "../dtos/request/vocabulary.request.dto";
 import AppError from "../utils/AppError";
-import { getGeminiContent } from "./gemini.service";
+import { getGeminiContentBatch } from "./gemini.service";
 import { getAzureTTS } from "./azure.service";
-
+import pLimit from "p-limit";
+const CONCURRENT_GEMINI_LIMIT = 4; // Giảm từ 5 xuống 4 để tránh overload
+const geminiLimit = pLimit(CONCURRENT_GEMINI_LIMIT);
 @injectable()
 class VocabularyService {
 
@@ -47,11 +49,14 @@ class VocabularyService {
         if (!set) throw AppError.notFoundError("Bộ flashcard không tồn tại");
 
         return {
-            set_id: set._id,
+            set_id: set._id.toString(),
             title: set.title,
             part_of_speech: set.part_of_speech,
             day_number: set.day_number,
-            cards: set.cards
+            cards: set.cards.map(card => ({
+                ...card,
+                _id: card._id.toString()
+            }))
         };
     };
 
@@ -62,7 +67,7 @@ class VocabularyService {
     createVocabularySet = async (dto: CreateSetReqDto) => {
         // Kiểm tra xem bộ ngày đó của loại từ đó đã tồn tại chưa
         const exists = await VocabularySetModel.exists({
-            course_id: dto.course_id, // <--- THÊM ĐIỀU KIỆN NÀY
+            course_id: dto.course_id,
             part_of_speech: dto.part_of_speech,
             day_number: dto.day_number
         });
@@ -71,7 +76,17 @@ class VocabularyService {
         }
 
         const created = await VocabularySetModel.create(dto);
-        return created.toObject();
+        const obj = created.toObject();
+
+        return {
+            ...obj,
+            _id: obj._id.toString(),
+            course_id: obj.course_id.toString(),
+            cards: obj.cards.map(card => ({
+                ...card,
+                _id: card._id.toString()
+            }))
+        };
     };
 
 
@@ -106,56 +121,72 @@ class VocabularyService {
         if (newTerms.length === 0)
             throw AppError.conflictError("Không có từ mới để thêm.");
 
-        // 4️ Sinh nội dung song song (Gemini + TTS)
-        const newDocs = await Promise.all(
-            newTerms.map(async (card) => {
-                const term = card.term.trim();
-                const mainMeaning = (card.mainMeaning || "").trim();
+        // 4️ Gọi Gemini BATCH cho TẤT CẢ từ cùng lúc
+        try {
+            // Bước 1: Gọi Gemini batch
+            const geminiResults = await getGeminiContentBatch(
+                newTerms.map(card => ({
+                    term: card.term.trim(),
+                    mainMeaning: (card.mainMeaning || "").trim(),
+                }))
+            );
 
-                const llmData = await getGeminiContent(term, mainMeaning);
+            console.log(`✅ Gemini batch completed for ${geminiResults.length} terms`);
 
-                // chạy Azure TTS song song cho 2 giọng
-                const [audioUS_url, audioUK_url] = await Promise.all([
-                    getAzureTTS(term, "en-US"),
-                    getAzureTTS(term, "en-GB"),
-                ]);
+            // Bước 2: Gọi TTS
+            const newDocs = await Promise.all(
+                geminiResults.map(async ({ term, data: llmData }) => {
+                    const mainMeaning = newTerms.find(c => c.term.trim() === term)?.mainMeaning || "";
 
-                existingTerms.add(term.toLowerCase());
+                    const [audioUS_url, audioUK_url] = await Promise.all([
+                        getAzureTTS(term, "en-US"),
+                        getAzureTTS(term, "en-GB"),
+                    ]);
 
-                return {
-                    _id: new mongoose.Types.ObjectId(),
-                    term,
-                    mainMeaning,
-                    ipa: llmData.ipa,
-                    collocations: llmData.collocations,
-                    example: llmData.examples[0],
-                    audioUS_url,
-                    audioUK_url,
-                };
-            })
-        );
-        console.log("New documents created:", newDocs);
-        // 5️ Push vào DB
-        const updated = await VocabularySetModel.findByIdAndUpdate(
-            setId,
-            { $push: { cards: { $each: newDocs } } },
-            { new: true }
-        ).lean();
+                    existingTerms.add(term.toLowerCase());
 
-        if (!updated)
-            throw AppError.internalServerError("Thêm flashcard thất bại.");
+                    return {
+                        _id: new mongoose.Types.ObjectId(),
+                        term,
+                        mainMeaning,
+                        ipa: llmData.ipa,
+                        collocations: llmData.collocations,
+                        example: llmData.examples[0],
+                        audioUS_url,
+                        audioUK_url,
+                    };
+                })
+            );
 
-        return {
-            set_id: updated._id.toString(), // Chuyển sang string
-            course_id: updated.course_id.toString(), // Chuyển sang string
-            addedCount: newDocs.length,
-            newCards: newDocs.map(c => ({
-                _id: c._id.toString(), // Chuyển sang string
-                term: c.term,
-                mainMeaning: c.mainMeaning,
-            })),
-            totalCards: updated.cards.length,
-        };
+            console.log("✅ TTS completed, uploading to DB...");
+
+            // 5️ Push vào DB
+            const updated = await VocabularySetModel.findByIdAndUpdate(
+                setId,
+                { $push: { cards: { $each: newDocs } } },
+                { new: true }
+            ).lean();
+
+            if (!updated)
+                throw AppError.internalServerError("Thêm flashcard thất bại.");
+
+            return {
+                set_id: updated._id.toString(),
+                addedCount: newDocs.length,
+                newCards: newDocs.map(c => ({
+                    _id: c._id.toString(),
+                    term: c.term,
+                    mainMeaning: c.mainMeaning,
+                    ipa: c.ipa,
+                    collocations: c.collocations,
+                    examples: [c.example], // Chuyển thành array
+                })),
+                totalCards: updated.cards.length,
+            };
+        } catch (error) {
+            console.error(" Error in addFlashCards:", error);
+            throw error;
+        }
     };
 
     /**

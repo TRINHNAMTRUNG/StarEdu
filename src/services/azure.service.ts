@@ -1,9 +1,9 @@
 // src/services/azureService.ts
 import axios from "axios";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { v4 as uuidv4 } from "uuid";
 import AppError from "../utils/AppError";
 import { ENV } from "../config/environment";
+import { uploadToS3 } from "../config/s3";
 
 const {
     AZURE_SPEECH_KEY,
@@ -15,14 +15,6 @@ const {
     AWS_SECRET_ACCESS_KEY,
 } = ENV;
 
-// -------------------- S3 CLIENT --------------------
-const s3Client = new S3Client({
-    region: AWS_S3_REGION,
-    credentials: {
-        accessKeyId: AWS_ACCESS_KEY_ID || "",
-        secretAccessKey: AWS_SECRET_ACCESS_KEY || "",
-    },
-});
 
 // -------------------- TOKEN CACHE --------------------
 let cachedToken: string | null = null;
@@ -93,24 +85,17 @@ export async function getAzureTTS(word: string, voiceCode: "en-GB" | "en-US"): P
 
         const audioBuffer = Buffer.from(ttsResponse.data);
 
-        // 5️ Upload file âm thanh lên S3
+        // Tạo key với cấu trúc: audios/vocabulary/{word}_{voiceCode}_{uuid}.mp3
         const blobName = `audios/vocabulary/${word}_${voiceCode}_${uuidv4()}.mp3`;
-        const uploadCommand = new PutObjectCommand({
-            Bucket: AWS_S3_BUCKET_NAME,
-            Key: blobName,
-            Body: audioBuffer,
-            ContentType: "audio/mp3"
-        });
 
-        await s3Client.send(uploadCommand);
+        // Upload lên S3 sử dụng config chung
+        const s3Url = await uploadToS3(blobName, audioBuffer, "audio/mp3");
 
-        // 6️ Trả về URL công khai
-        const s3Url = `https://${AWS_S3_BUCKET_NAME}.s3.${AWS_S3_REGION}.amazonaws.com/${blobName}`;
         console.log(`TTS created and uploaded: ${s3Url}`);
 
         return s3Url;
     } catch (error: any) {
         console.error(`Azure TTS Error for "${word}":`, error?.response?.data || error);
-        throw AppError.internalServerError(`Không thể tạo hoặc tải lên âm thanh cho từ ${word}.`);
+        throw AppError.internalServerError(`Không thể tạo hoặc tải lên âm thanh cho "${word}".`);
     }
 }
