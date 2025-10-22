@@ -2,9 +2,15 @@ import { Router } from "express";
 import { container } from "tsyringe";
 import VocabularyController from "../../controllers/vocabulary.controller";
 import { validationBody, validationParams } from "../../middlewares/validationError.middleware";
+import { authenticateToken, authorizeRoles } from "../../middlewares/auth.middleware";
+import { UserRole } from "../../models/user.model";
 import { CreateSetReqDto, AddFlashCardsReqDto, SetIdParamDto } from "../../dtos/request/vocabulary.request.dto";
+
 const adminVocabularyRoutes = Router();
 const vocabularyController = container.resolve(VocabularyController);
+
+// Tat ca admin routes can auth va role check
+adminVocabularyRoutes.use(authenticateToken, authorizeRoles(UserRole.ADMIN));
 
 // GET danh sách bộ flashcard theo từ loại
 adminVocabularyRoutes.get("/sets", vocabularyController.getVocabularySets);

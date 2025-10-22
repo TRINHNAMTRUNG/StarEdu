@@ -2,6 +2,8 @@ import { Router } from "express";
 import { container } from "tsyringe";
 import CertificationController from "../../controllers/certification.controller";
 import { validationBody, validationParams } from "../../middlewares/validationError.middleware";
+import { authenticateToken, authorizeRoles } from "../../middlewares/auth.middleware";
+import { UserRole } from "../../models/user.model";
 import {
     CreateCertificationReqDto,
     UpdateCertificationReqDto,
@@ -10,6 +12,9 @@ import {
 
 const adminCertificationRoutes = Router();
 const certificationController = container.resolve(CertificationController);
+
+// Tat ca admin routes can auth va role check
+adminCertificationRoutes.use(authenticateToken, authorizeRoles(UserRole.ADMIN));
 
 // POST /admin/certifications
 adminCertificationRoutes.post(
@@ -29,11 +34,5 @@ adminCertificationRoutes.patch(
     certificationController.updateCertification
 );
 
-// DELETE /admin/certifications/:id
-adminCertificationRoutes.delete(
-    "/:id",
-    validationParams(CertificationIdParamDto),
-    certificationController.deleteCertification
-);
 
 export default adminCertificationRoutes;
