@@ -33,12 +33,10 @@ class CertificationController {
 
     // GET /admin/certifications
     getCertificationList = asyncHandler(async (req: Request, res: Response) => {
-        const { page = 1, limit = 10 } = req.query;
-        const result = await this.certificationService.getCertificationList(Number(page), Number(limit));
+        const result = await this.certificationService.getCertifications();
 
-        // Chuẩn hóa đầu ra DTO
         const response = instanceToPlain(
-            plainToInstance(GetCertificationListResDto, result, { excludeExtraneousValues: true })
+            plainToInstance(GetCertificationListResDto, { data: result }, { excludeExtraneousValues: true })
         );
 
         return res.status(200).json(

@@ -14,20 +14,16 @@ class CertificationService {
         return certification.toObject();
     };
 
-    /**
-     * Lấy danh sách chứng chỉ (có phân trang)
-     */
-    getCertificationList = async (page: number = 1, limit: number = 10) => {
-        const [total, certifications] = await Promise.all([
-            CertificationModel.countDocuments(),
-            CertificationModel.find()
-                .sort({ createdAt: -1 })
-                .skip((page - 1) * limit)
-                .limit(limit)
-                .lean()
-        ]);
 
-        return { total, page, limit, data: certifications };
+    /**
+     * Lấy danh sách chứng chỉ (không phân trang)
+     */
+    getCertifications = async () => {
+        const certifications = await CertificationModel.find().lean();
+        return certifications.map(cert => ({
+            ...cert,
+            _id: cert._id.toString()
+        }));
     };
 
     /**

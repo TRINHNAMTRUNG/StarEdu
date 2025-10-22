@@ -19,14 +19,10 @@ export class CreateCertificationResDto {
 
     @Expose()
     validityPeriod?: number;
-
-    @Expose()
-    passingScore?: number;
 }
 
 export class CertificationItemResDto {
     @Expose()
-    @Transform(({ value }) => value?.toString())
     _id!: string;
 
     @Expose()
@@ -43,9 +39,6 @@ export class CertificationItemResDto {
 
     @Expose()
     validityPeriod?: number;
-
-    @Expose()
-    passingScore?: number;
 
     @Expose()
     createdAt!: Date;
@@ -88,9 +81,6 @@ export class UpdateCertificationResDto {
 
     @Expose()
     validityPeriod?: number;
-
-    @Expose()
-    passingScore?: number;
 }
 
 export class DeleteCertificationResDto {

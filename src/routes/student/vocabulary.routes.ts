@@ -23,14 +23,14 @@ studentVocabularyRoutes.get(
     "/sets",
     studentVocabularyController.getVocabularySets
 );
-
+// GET /student/vocabulary/sets/:setId
 studentVocabularyRoutes.get(
     "/sets/:setId",
     validationParams(SetIdParamDto),
     studentVocabularyController.getVocabularySetById
 );
 
-// Pronunciation API
+// POST /student/vocabulary/pronunciation
 studentVocabularyRoutes.post(
     "/pronunciation",
     upload.single("audio"),
