@@ -28,7 +28,7 @@ export const authorizeRoles = (...roles: UserRole[]) => async (req: Request, res
         }
 
         const { id, role } = req.user;
-
+        console.log("==============", req.user);
         // Kiểm tra vai trò
         if (!roles.includes(role)) {
             throw AppError.forbiddenError("Không có quyền truy cập tài nguyên này");

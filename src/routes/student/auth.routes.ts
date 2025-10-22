@@ -12,14 +12,14 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 studentAuthRoutes.post(
-    "/student/register",
+    "/register",
     upload.single("avatar"),
     validationBody(StudentRegisterReqDto),
     authController.registerStudentByPhone
 );
 
 studentAuthRoutes.post(
-    "/student/verify-account",
+    "/verify-account",
     validationBody(VerifyOtpReqDto),
     authController.verifyStudentOtp
 );

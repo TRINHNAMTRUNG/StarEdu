@@ -9,6 +9,7 @@ import TeacherService from "./teacher.service";
 import { JwtUserPayload, verifyRefreshToken, generateTokens } from "../utils/token.util";
 import RefreshTokenModel from "../models/refreshToken.model";
 import mongoose from "mongoose";
+import { Level } from "../models/student.model";
 
 @injectable()
 class AuthService {
@@ -53,7 +54,7 @@ class AuthService {
 
     verifyAccountOtp = async (phone: string, code: string) => {
         // Kiểm tra sự tồn tại của tài khoản
-        let hasAccount = await UserModel.findOne({ phone }, { password: 0, createdAt: 0, updatedAt: 0, role: 0 });
+        let hasAccount = await UserModel.findOne({ phone }, { password: 0, createdAt: 0, updatedAt: 0 });
         if (!hasAccount) {
             throw AppError.conflictError("Số điện thoại chưa được đăng ký");
         }
@@ -75,7 +76,7 @@ class AuthService {
         hasAccount.isVerified = true;
         hasAccount.pinId = undefined; // Xoá pinId đã sử dụng
         const user = await hasAccount.save();
-        this.studentService.createStudentWithUserId(user._id.toString(), "Beginner", 0);
+        await this.studentService.createStudentWithUserId(user._id.toString(), Level.A1, 0);
         return { ...user.toObject(), ...generateTokens({ id: user._id.toString(), role: user.role }) };
     }
 

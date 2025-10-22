@@ -2,9 +2,9 @@ import mongoose, { Schema, Document, Model, InferSchemaType } from "mongoose";
 import bcrypt from "bcrypt";
 
 export enum UserRole {
-    ADMIN = "admin",
-    TEACHER = "teacher",  // Giữ nguyên, nhưng = Content Creator
-    STUDENT = "student"
+    STUDENT = "student",
+    TEACHER = "teacher",
+    ADMIN = "admin"
 }
 
 export enum Gender {
