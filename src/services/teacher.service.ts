@@ -1,4 +1,3 @@
-
 import { injectable } from "tsyringe";
 import TeacherModel, { EmploymentStatus } from "../models/teacher.model";
 import AppError from "../utils/AppError";
@@ -37,7 +36,13 @@ class TeacherService {
             qualifications: qualifications || [],
         });
 
-        return { user: user.toObject(), teacher: teacher.toObject() };
+        return { 
+            user: user.toObject(), 
+            teacher: {
+                ...teacher.toObject(),
+                _id: teacher._id.toString()
+            }
+        };
     };
 
     updateTeacherInfoByAdmin = async (userId: string, updateData: UpdateTeacherByAdminReqDto) => {
@@ -79,23 +84,28 @@ class TeacherService {
             await teacherExists.save();
         }
 
-        return { user: userExists, teacher: teacherExists };
+        return { 
+            user: userExists, 
+            teacher: {
+                ...teacherExists.toObject(),
+                _id: teacherExists._id.toString()
+            }
+        };
     };
 
     getTeacherList = async () => {
-        // Lấy danh sách giảng viên
         const teachers = await TeacherModel.find()
             .populate("user", "name phone avatar gender")
             .lean();
 
         return teachers.map((teacher) => ({
             ...teacher,
+            _id: teacher._id.toString(),
             user: teacher.user
         }));
     };
 
     getTeacherById = async (userId: string) => {
-        // Lấy giảng viên theo id
         const teacher = await TeacherModel.findOne({ user: userId })
             .populate("user", "name phone avatar gender");
 
@@ -103,14 +113,13 @@ class TeacherService {
             throw AppError.notFoundError("Giảng viên không tồn tại");
         }
 
-        return teacher.toObject();
+        return {
+            ...teacher.toObject(),
+            _id: teacher._id.toString()
+        };
     };
 
-    async setTeacherStatus(
-        teacherIds: string[],
-        status: EmploymentStatus
-    ): Promise<{ modifiedCount: number; updatedTeachers: any[] }> {
-
+    async setTeacherStatus(teacherIds: string[], status: EmploymentStatus) {
         if (!Array.isArray(teacherIds) || teacherIds.length === 0) {
             throw AppError.badRequestError("Danh sách teacherIds không hợp lệ");
         }
@@ -131,7 +140,11 @@ class TeacherService {
 
         return {
             modifiedCount: result.modifiedCount,
-            updatedTeachers
+            updatedTeachers: updatedTeachers.map(t => ({
+                ...t,
+                _id: t._id.toString(),
+                user: t.user.toString()
+            }))
         };
     }
 }

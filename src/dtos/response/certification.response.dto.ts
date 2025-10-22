@@ -1,8 +1,7 @@
-import { Expose, Transform, Type } from "class-transformer";
+import { Expose, Type } from "class-transformer";
 
 export class CreateCertificationResDto {
     @Expose()
-    @Transform(({ value }) => value?.toString())
     _id!: string;
 
     @Expose()
@@ -49,22 +48,12 @@ export class CertificationItemResDto {
 
 export class GetCertificationListResDto {
     @Expose()
-    total!: number;
-
-    @Expose()
-    page!: number;
-
-    @Expose()
-    limit!: number;
-
-    @Expose()
     @Type(() => CertificationItemResDto)
     data!: CertificationItemResDto[];
 }
 
 export class UpdateCertificationResDto {
     @Expose()
-    @Transform(({ value }) => value?.toString())
     _id!: string;
 
     @Expose()

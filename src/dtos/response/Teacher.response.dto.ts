@@ -1,7 +1,6 @@
 import { UserBaseResDto } from "../UserBase";
 import { PickType } from "@nestjs/mapped-types";
 import { Expose, Type } from "class-transformer";
-import { Schema } from "mongoose";
 
 export class QualificationResDto {
     @Expose()
@@ -17,10 +16,9 @@ export class QualificationResDto {
     issue_date!: Date;
 }
 
-// /admin/teachers
 export class TeacherInfoResDto {
     @Expose()
-    _id!: Schema.Types.ObjectId;
+    _id!: string;
 
     @Expose()
     experience_years?: number;
