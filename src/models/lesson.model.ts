@@ -4,10 +4,11 @@ const LessonSchema = new Schema({
     course_id: { type: Schema.Types.ObjectId, ref: "Course", required: true },
     title: { type: String, required: true },
     description: { type: String },
-    order: { type: Number, required: true, default: 0 }, // Thứ tự lesson trong course
-    is_published: { type: Boolean, default: false }, // Xuất bản/ẩn
-    estimated_duration: { type: Number, default: 0 }, // Thời lượng ước tính (phút)
-    created_by: { type: Schema.Types.ObjectId, ref: "Teacher", required: true }, // Teacher tạo
+    order: { type: Number, required: true },
+    is_published: { type: Boolean, default: false },
+    created_by: { type: Schema.Types.ObjectId, ref: "Teacher", required: true },
+    duration_minutes: { type: Number, default: 0 },
+    total_sections: { type: Number, default: 0 },
 }, { timestamps: true, collection: "lessons" });
 
 export type ILesson = InferSchemaType<typeof LessonSchema>;

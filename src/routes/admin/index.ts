@@ -5,6 +5,7 @@ import adminVocabularyRoutes from "./vocabulary.routes";
 import adminCertificationRoutes from "./certification.routes";
 import adminCourseRoutes from "./course.routes";
 import adminRoadmapRoutes from "./roadmap.routes";
+import adminLessonRoutes from "./lesson.routes";
 
 const adminRouter = Router();
 
@@ -14,5 +15,6 @@ adminRouter.use("/vocabulary", adminVocabularyRoutes);
 adminRouter.use("/certifications", adminCertificationRoutes);
 adminRouter.use("/courses", adminCourseRoutes);
 adminRouter.use("/roadmaps", adminRoadmapRoutes);
+adminRouter.use("/lessons", adminLessonRoutes);
 
 export default adminRouter;
