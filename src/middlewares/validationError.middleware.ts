@@ -9,6 +9,30 @@ enum ValidatorType {
     PARAMS = "Params"
 }
 
+// Format lỗi để trả về đúng field dạng: "user.profile.phone.number"
+function formatErrorDetails(
+    errors: ValidationError[],
+    parentPath = ""
+): ErrorDetailType[] {
+    return errors.flatMap((error) => {
+        const currentPath = parentPath ? `${parentPath}.${error.property}` : error.property;
+
+        if (error.constraints) {
+            return Object.values(error.constraints).map((message) => ({
+                field: currentPath,
+                message,
+                value: error.value,
+            }));
+        }
+
+        if (error.children && error.children.length > 0) {
+            return formatErrorDetails(error.children, currentPath);
+        }
+
+        return [];
+    });
+}
+
 const validateCore = (DTOClass: new () => any, validatorType: ValidatorType) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         try {
@@ -74,25 +98,41 @@ export const log = (req: Request, res: Response, next: NextFunction) => {
 
 export const validationBody = (dtoClass: any) => {
     return async (req: Request, res: Response, next: NextFunction) => {
-        const dtoInstance = plainToInstance(dtoClass, req.body, {
-            enableImplicitConversion: true,
-            excludeExtraneousValues: false
-        });
+        try {
+            // Kiểm tra dtoClass có hợp lệ không
+            if (!dtoClass || typeof dtoClass !== 'function') {
+                console.error('❌ Invalid DTO class:', dtoClass);
+                return next(AppError.badRequestError("Invalid DTO class configuration"));
+            }
 
-        const errors = await validate(dtoInstance);
+            console.log('✅ DTO Class:', dtoClass.name);
 
-        if (errors.length > 0) {
-            const formattedErrors = errors.map(err => ({
-                field: err.property,
-                value: err.value,
-                message: Object.values(err.constraints || {}).join(", ")
-            }));
+            const dtoInstance = plainToInstance(dtoClass, req.body, {
+                enableImplicitConversion: true,
+                excludeExtraneousValues: false
+            });
 
-            return next(AppError.validationError("Dữ liệu không hợp lệ", formattedErrors));
+            console.log('✅ DTO Instance created:', dtoInstance);
+
+            const errors = await validate(dtoInstance);
+
+            if (errors.length > 0) {
+                console.log('❌ Validation error:', errors);
+                const formattedErrors = errors.map(err => ({
+                    field: err.property,
+                    value: err.value,
+                    message: Object.values(err.constraints || {}).join(", ")
+                }));
+
+                return next(AppError.validationError("Dữ liệu không hợp lệ", formattedErrors));
+            }
+
+            req.body = dtoInstance;
+            next();
+        } catch (error) {
+            console.error('❌ Validation error:', error);
+            next(error);
         }
-
-        req.body = dtoInstance;
-        next();
     };
 };
 
@@ -102,28 +142,4 @@ export const validationQuery = (DTOClass: new () => any) => {
 
 export const validationParams = (DTOClass: new () => any) => {
     return validateCore(DTOClass, ValidatorType.PARAMS);
-};
-
-// Format lỗi để trả về đúng field dạng: "user.profile.phone.number"
-const formatErrorDetails = (
-    errors: ValidationError[],
-    parentPath = ""
-): ErrorDetailType[] => {
-    return errors.flatMap((error) => {
-        const currentPath = parentPath ? `${parentPath}.${error.property}` : error.property;
-
-        if (error.constraints) {
-            return Object.values(error.constraints).map((message) => ({
-                field: currentPath,
-                message,
-                value: error.value,
-            }));
-        }
-
-        if (error.children && error.children.length > 0) {
-            return formatErrorDetails(error.children, currentPath);
-        }
-
-        return [];
-    });
 };

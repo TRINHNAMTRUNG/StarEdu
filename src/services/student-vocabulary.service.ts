@@ -5,29 +5,12 @@ import AppError from "../utils/AppError";
 
 @injectable()
 class StudentVocabularyService {
-    // Lay danh sach sets trong 1 course (khong co cards)
-    getVocabularySetsByCourse = async (studentId: string, courseId: string) => {
-        // Kiem tra student da enroll course chua
-        // const enrollments = await EnrollmentModel.find({ student: studentId })
-        //     .populate("roadmap")
-        //     .lean();
-
-        // const enrolledCourseIds = new Set<string>();
-        // enrollments.forEach((enrollment: any) => {
-        //     if (enrollment.roadmap?.courses) {
-        //         enrollment.roadmap.courses.forEach((cId: any) => {
-        //             enrolledCourseIds.add(cId.toString());
-        //         });
-        //     }
-        // });
-
-        // if (!enrolledCourseIds.has(courseId)) {
-        //     throw AppError.forbiddenError("Bạn chưa đăng ký khóa học này");
-        // }
-
-        // Lay danh sach sets (khong populate cards)
-        const sets = await VocabularySetModel.find({ course_id: courseId })
+    // Lấy tất cả bộ từ vựng (không phân biệt course)
+    getAllVocabularySets = async (studentId: string) => {
+        // Lấy danh sách tất cả sets (không lọc theo course_id)
+        const sets = await VocabularySetModel.find()
             .select("_id part_of_speech day_number title description cards")
+            .sort({ day_number: 1 }) // Sắp xếp theo ngày
             .lean();
 
         return sets.map(set => ({

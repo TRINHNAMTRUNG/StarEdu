@@ -102,7 +102,16 @@ class AuthService {
         if (!isPasswordValid) {
             throw AppError.unauthorizedError("Mật khẩu không đúng");
         }
-        return { ...hasAccount.toObject(), ...generateTokens({ id: hasAccount._id.toString(), role: hasAccount.role }) };
+
+        // Sinh token và lưu refresh token vào database
+        const tokens = generateTokens({ id: hasAccount._id.toString(), role: hasAccount.role });
+        await RefreshTokenModel.create({
+            user: hasAccount._id,
+            token: tokens.refreshToken,
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 ngày
+        });
+
+        return { ...hasAccount.toObject(), ...tokens };
     }
 
     logout = async (refreshToken: string) => {

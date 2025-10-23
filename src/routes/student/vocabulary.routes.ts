@@ -18,7 +18,7 @@ studentVocabularyRoutes.use(
     authorizeRoles(UserRole.STUDENT)
 );
 
-// GET /student/vocabulary/sets?course_id=xxx
+// GET /student/vocabulary/sets - Lấy tất cả bộ từ vựng (không cần course_id)
 studentVocabularyRoutes.get(
     "/sets",
     studentVocabularyController.getVocabularySets

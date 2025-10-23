@@ -43,7 +43,7 @@
     "microsoft-cognitiveservices-speech-sdk": "^1.46.0",
     "mongoose": "^8.18.0",
     "multer": "^2.0.2",
-    "p-limit": "^7.2.0",
+    "p-limit": "^2.3.0",
     "reflect-metadata": "^0.2.2",
     "tsyringe": "^4.10.0",
     "twilio": "^5.8.2",

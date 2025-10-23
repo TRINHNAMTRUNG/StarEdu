@@ -14,21 +14,13 @@ import AppError from "../utils/AppError";
 class StudentVocabularyController {
     constructor(private readonly studentVocabularyService: StudentVocabularyService) { }
 
-    // GET /student/vocabulary/sets?course_id=xxx
+    // GET /student/vocabulary/sets - Lấy tất cả bộ từ vựng
     getVocabularySets = asyncHandler(async (req: Request, res: Response) => {
         if (!req.user) {
             throw AppError.unauthorizedError("Chưa xác thực");
         }
 
-        const { course_id } = req.query;
-        if (!course_id) {
-            throw AppError.badRequestError("course_id là bắt buộc");
-        }
-
-        const result = await this.studentVocabularyService.getVocabularySetsByCourse(
-            req.user.id,
-            course_id as string
-        );
+        const result = await this.studentVocabularyService.getAllVocabularySets(req.user.id);
 
         const response = instanceToPlain(
             plainToInstance(GetStudentVocabularySetsResDto, { total: result.length, data: result }, { excludeExtraneousValues: true })
