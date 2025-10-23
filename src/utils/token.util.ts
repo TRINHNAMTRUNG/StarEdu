@@ -12,10 +12,10 @@ export interface JwtUserPayload {
 
 export const generateTokens = (payload: JwtUserPayload) => {
     console.log("==============", payload);
-    const accessToken = jwt.sign(payload, ENV.AT_SECRET, { expiresIn: "5h" });
-    const refreshToken = jwt.sign(payload, ENV.RT_SECRET, { expiresIn: "7d" });
-    return { accessToken, refreshToken };
-}
+    const access_token = jwt.sign(payload, ENV.AT_SECRET, { expiresIn: "5h" });
+    const refresh_token = jwt.sign(payload, ENV.RT_SECRET, { expiresIn: "7d" });
+    return { access_token, refresh_token };  // ✅ Đổi keys
+};
 
 
 export const verifyAccessToken = (token: string): JwtUserPayload => {

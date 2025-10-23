@@ -26,11 +26,11 @@ const FlashCardSchema = new Schema({
 }, { _id: true }); // mỗi flashcard có _id riêng
 
 const VocabularySetSchema = new Schema({
-    course_id: { type: Schema.Types.ObjectId, ref: "Course", required: true },
     part_of_speech: { type: String, enum: Object.values(PartOfSpeech), required: true },
     day_number: { type: Number, required: true },
     title: { type: String, required: true },
     description: { type: String },
+    is_free: { type: Boolean, default: false },
     cards: { type: [FlashCardSchema], default: [] },
 }, { timestamps: true, collection: "vocabulary_sets" });
 

@@ -3,17 +3,21 @@ import { injectable } from "tsyringe";
 import { asyncHandler } from "../middlewares/handleErorr.middleware";
 import VocabularyService from "../services/vocabulary.service";
 import { plainToInstance, instanceToPlain } from "class-transformer";
-import { VocabularySetResDto, VocabularySetListResDto, FlashCardResDto, AddFlashCardsResDto } from "../dtos/response/vocabulary.response.dto";
+import {
+    GetStudentVocabularySetsResDto,
+    GetStudentVocabularySetDetailResDto
+} from "../dtos/response/student-vocabulary.response.dto";
 import ResponseFormat from "../utils/ResponseFormat";
 import { CreateSetReqDto, AddFlashCardsReqDto } from "../dtos/request/vocabulary.request.dto";
+import { AddFlashCardsResDto, FlashCardResDto, VocabularySetResDto } from "../dtos/response/vocabulary.response.dto";
 
 @injectable()
 class VocabularyController {
     constructor(private readonly vocabularyService: VocabularyService) { }
 
-    // Lấy danh sách các bộ flashcard theo từ loại
+    // GET /admin/vocabulary/sets
     getVocabularySets = asyncHandler(async (req: Request, res: Response) => {
-        const { part_of_speech, page = 1, limit = 10 } = req.query;
+        const { part_of_speech, page = 1, limit = 100 } = req.query;
         const result = await this.vocabularyService.getVocabularySets(
             String(part_of_speech || ""),
             Number(page),
@@ -21,27 +25,29 @@ class VocabularyController {
         );
 
         const response = instanceToPlain(
-            plainToInstance(VocabularySetListResDto, result, { excludeExtraneousValues: true })
+            plainToInstance(GetStudentVocabularySetsResDto, { total: result.length, data: result }, { excludeExtraneousValues: true })
         );
 
         return res.status(200).json(
-            ResponseFormat.successResponse(response, "Lấy danh sách bộ flashcard thành công", 200, req.requestId)
+            ResponseFormat.successResponse(response, "Lấy danh sách bộ từ vựng thành công", 200, req.requestId)
         );
     });
 
-    // Lấy tất cả flashcard trong một bộ
-    getFlashCardsBySet = asyncHandler(async (req: Request, res: Response) => {
-        const result = await this.vocabularyService.getFlashCardsBySet(req.params.setId);
+    // GET /admin/vocabulary/sets/:setId
+    getVocabularySetById = asyncHandler(async (req: Request, res: Response) => {
+        const { setId } = req.params;
+        const result = await this.vocabularyService.getVocabularySetById(setId);
+
         const response = instanceToPlain(
-            plainToInstance(FlashCardResDto, result, { excludeExtraneousValues: true })
+            plainToInstance(GetStudentVocabularySetDetailResDto, result, { excludeExtraneousValues: true })
         );
 
         return res.status(200).json(
-            ResponseFormat.successResponse(response, "Lấy danh sách flashcard thành công", 200, req.requestId)
+            ResponseFormat.successResponse(response, "Lấy chi tiết bộ từ vựng thành công", 200, req.requestId)
         );
     });
 
-    // Tạo 1 bộ flashcard mới
+    // POST /admin/vocabulary/sets
     createVocabularySet = asyncHandler(async (req: Request<{}, {}, CreateSetReqDto>, res: Response) => {
         const setInfo: CreateSetReqDto = req.body;
         const result = await this.vocabularyService.createVocabularySet(setInfo);
@@ -55,7 +61,7 @@ class VocabularyController {
         );
     });
 
-    // Thêm flashcard vào bộ
+    // POST /admin/vocabulary/sets/:setId/cards
     addFlashCards = asyncHandler(async (req: Request, res: Response) => {
         const dto: AddFlashCardsReqDto = req.body;
         const result = await this.vocabularyService.addFlashCards(req.params.setId, dto);
@@ -69,7 +75,7 @@ class VocabularyController {
         );
     });
 
-    // Xóa 1 hoặc nhiều flashcard
+    // DELETE /admin/vocabulary/sets/:setId/cards
     deleteFlashCards = asyncHandler(async (req: Request, res: Response) => {
         const { cardIds } = req.body; // truyền mảng cardIds
         const result = await this.vocabularyService.deleteFlashCards(req.params.setId, cardIds);
@@ -83,7 +89,7 @@ class VocabularyController {
         );
     });
 
-    // Xóa 1 hoặc nhiều bộ flashcard
+    // DELETE /admin/vocabulary/sets
     deleteVocabularySets = asyncHandler(async (req: Request, res: Response) => {
         const { setIds } = req.body;
         const result = await this.vocabularyService.deleteVocabularySets(setIds);

@@ -26,7 +26,6 @@ class RoadmapService {
         return {
             ...roadmap,
             _id: roadmap._id.toString(),
-            certification_id: roadmap.certification_id.toString(),
             courses: roadmap.courses.map((course: any) => ({
                 _id: course._id.toString(),
                 title: course.title,
@@ -38,10 +37,6 @@ class RoadmapService {
 
     // API #1: Tao roadmap moi
     createRoadmap = async (dto: CreateRoadmapReqDto) => {
-        const certification = await CertificationModel.findById(dto.certification_id);
-        if (!certification) {
-            throw AppError.notFoundError("Chứng chỉ không tồn tại");
-        }
 
         const roadmap = await RoadmapModel.create({
             ...dto,
@@ -61,10 +56,6 @@ class RoadmapService {
     // API #2: Lay danh sach roadmaps
     getRoadmapList = async (page: number = 1, limit: number = 10, filters?: any) => {
         const query: any = {};
-
-        if (filters?.certification_id) {
-            query.certification_id = filters.certification_id;
-        }
 
         if (filters?.is_published !== undefined) {
             query.is_published = filters.is_published === "true";

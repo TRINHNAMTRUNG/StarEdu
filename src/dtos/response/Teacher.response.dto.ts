@@ -16,6 +16,24 @@ export class QualificationResDto {
     issue_date!: Date;
 }
 
+// User info trong teacher
+export class TeacherUserResDto {
+    @Expose()
+    _id!: string;
+
+    @Expose()
+    name!: string;
+
+    @Expose()
+    phone!: string;
+
+    @Expose()
+    avatar?: string;
+
+    @Expose()
+    gender!: string;
+}
+
 export class TeacherInfoResDto {
     @Expose()
     _id!: string;
@@ -28,44 +46,36 @@ export class TeacherInfoResDto {
     qualifications?: QualificationResDto[];
 }
 
-export class CreateTeacherResDto extends PickType(UserBaseResDto, [
-    'phone',
-    'name',
-    'avatar',
-    'gender'
-]) {
+// Dùng chung cho Create và List
+export class TeacherWithUserResDto {
     @Expose()
-    @Type(() => TeacherInfoResDto)
-    teacher!: TeacherInfoResDto;
+    _id!: string;
+
+    @Expose()
+    @Type(() => TeacherUserResDto)
+    user!: TeacherUserResDto;
+
+    @Expose()
+    experience_years!: number;
+
+    @Expose()
+    employment_status!: string;
+
+    @Expose()
+    @Type(() => QualificationResDto)
+    qualifications!: QualificationResDto[];
 }
 
-// /admin/teachers/:id
-export class UpdateTeacherResDto extends PickType(UserBaseResDto, [
-    'phone',
-    'name',
-    'avatar',
-    'gender'
-]) {
-    @Expose()
-    @Type(() => TeacherInfoResDto)
-    teacher!: TeacherInfoResDto;
-}
+export class CreateTeacherResDto extends TeacherWithUserResDto {}
 
-// /admin/teachers
-export class GetTeacherListItemResDto extends PickType(UserBaseResDto, [
-    'phone',
-    'name',
-    'avatar'
-]) {
-    @Expose()
-    @Type(() => TeacherInfoResDto)
-    teacher!: TeacherInfoResDto;
-}
+// PATCH /admin/teachers/:id (giống GetTeacherListItemResDto)
+export class UpdateTeacherResDto extends TeacherWithUserResDto {}
 
+// GET /admin/teachers (list)
 export class GetTeacherListResDto {
     @Expose()
-    @Type(() => GetTeacherListItemResDto)
-    data!: GetTeacherListItemResDto[];
+    @Type(() => TeacherWithUserResDto)
+    data!: TeacherWithUserResDto[];
 }
 
 // /admin/teachers/set-status
@@ -80,3 +90,4 @@ export class SetTeacherStatusResDto {
         employment_status: string;
     }[];
 }
+

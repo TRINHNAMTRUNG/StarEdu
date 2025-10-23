@@ -14,20 +14,18 @@ import AppError from "../utils/AppError";
 class StudentVocabularyController {
     constructor(private readonly studentVocabularyService: StudentVocabularyService) { }
 
-    // GET /student/vocabulary/sets?course_id=xxx
+    // GET /student/vocabulary/sets?part_of_speech=noun
     getVocabularySets = asyncHandler(async (req: Request, res: Response) => {
-        if (!req.user) {
-            throw AppError.unauthorizedError("Chưa xác thực");
+        const studentId = req.user?.id;
+        const { part_of_speech } = req.query;
+
+        if (!part_of_speech) {
+            throw AppError.badRequestError("part_of_speech là bắt buộc");
         }
 
-        const { course_id } = req.query;
-        if (!course_id) {
-            throw AppError.badRequestError("course_id là bắt buộc");
-        }
-
-        const result = await this.studentVocabularyService.getVocabularySetsByCourse(
-            req.user.id,
-            course_id as string
+        const result = await this.studentVocabularyService.getVocabularySets(
+            part_of_speech as string,
+            studentId
         );
 
         const response = instanceToPlain(
@@ -39,14 +37,12 @@ class StudentVocabularyController {
         );
     });
 
-    // GET /student/vocabulary/sets/:setId
+    // GET /student/vocabulary/sets/:setId (Public hoac Private)
     getVocabularySetById = asyncHandler(async (req: Request, res: Response) => {
-        if (!req.user) {
-            throw AppError.unauthorizedError("Chưa xác thực");
-        }
-
+        const studentId = req.user?.id; // Optional
         const { setId } = req.params;
-        const result = await this.studentVocabularyService.getVocabularySetById(req.user.id, setId);
+        console.log("studentId:", studentId);
+        const result = await this.studentVocabularyService.getVocabularySetById(setId, studentId);
 
         const response = instanceToPlain(
             plainToInstance(GetStudentVocabularySetDetailResDto, result, { excludeExtraneousValues: true })

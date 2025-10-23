@@ -190,8 +190,8 @@ class CourseService {
 
     // API #7: Assign teachers vao course
     assignTeachersToCourse = async (id: string, dto: AssignTeachersReqDto) => {
-        const teachers = await TeacherModel.find({ 
-            _id: { $in: dto.teacher_ids } 
+        const teachers = await TeacherModel.find({
+            _id: { $in: dto.teacher_ids }
         });
 
         if (teachers.length !== dto.teacher_ids.length) {
@@ -264,7 +264,7 @@ class CourseService {
             throw AppError.badRequestError("Chỉ toggle isModifiable cho khóa học đã xuất bản");
         }
 
-        course.isModifiable = dto.isModifiable;
+        course.isModifiable = dto.is_modifiable;
         course.last_modified_by = new mongoose.Types.ObjectId(adminId);
         course.last_modified_at = new Date();
 

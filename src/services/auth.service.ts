@@ -80,30 +80,37 @@ class AuthService {
         return { ...user.toObject(), ...generateTokens({ id: user._id.toString(), role: user.role }) };
     }
 
-    login = async (phone: string, password: string) => {
-        // Kiểm tra sự tồn tại của tài khoản
-        let hasAccount = await UserModel
-            .findOne({ phone })
-            .select("+password +isActive +isVerified");
-        if (!hasAccount) {
-            throw AppError.conflictError("Số điện thoại chưa được đăng ký");
-        }
+    login = async (phone: string, password: string, expectedRole?: UserRole) => {
+        const user = await UserModel.findOne({ phone }, { createdAt: 0, updatedAt: 0 });
 
-        if (!hasAccount.isActive) {
-            throw AppError.forbiddenError("Tài khoản đã bị khoá");
+        if (!user) {
+            throw AppError.notFoundError("Tài khoản không tồn tại");
         }
-
-        if (!hasAccount.isVerified) {
+        if (!user.isVerified) {
             throw AppError.unauthorizedError("Tài khoản chưa được xác thực");
         }
-
-        // Kiểm tra mật khẩu
-        const isPasswordValid = await hasAccount.comparePassword(password);
-        if (!isPasswordValid) {
-            throw AppError.unauthorizedError("Mật khẩu không đúng");
+        if (!user.isActive) {
+            throw AppError.forbiddenError("Tài khoản đã bị khóa");
         }
-        return { ...hasAccount.toObject(), ...generateTokens({ id: hasAccount._id.toString(), role: hasAccount.role }) };
-    }
+
+        // ✅ THÊM: Check role match với route
+        if (expectedRole && user.role !== expectedRole) {
+            throw AppError.forbiddenError(`Tài khoản này không phải là ${expectedRole}`);
+        }
+
+        const isPasswordMatch = await user.comparePassword(password);
+        if (!isPasswordMatch) {
+            throw AppError.unauthorizedError("Mật khẩu không chính xác");
+        }
+
+        const tokens = generateTokens({ id: user._id.toString(), role: user.role });
+
+        return {
+            ...user.toObject(),
+            password: undefined,
+            ...tokens
+        };
+    };
 
     logout = async (refreshToken: string) => {
         if (!refreshToken) {
@@ -201,35 +208,102 @@ class AuthService {
         // Lưu RT mới vào DB
         await RefreshTokenModel.create({
             user: user._id,
-            token: newTokens.refreshToken,
+            token: newTokens.refresh_token,
             expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 ngày
         });
 
         return newTokens;
     }
 
-    async banUsers(userIds: string[]): Promise<{ modified: number; bannedUsers: any[] }> {
+    async banUsers(userIds: string[]) {
         if (!Array.isArray(userIds) || userIds.length === 0) {
             throw AppError.badRequestError("Danh sách userIds không hợp lệ");
         }
 
         const objectIds = userIds.map(id => new mongoose.Types.ObjectId(id));
 
-        // Cập nhật trạng thái tài khoản
-        const result = await UserModel.updateMany(
+        // Validate: Tìm users tồn tại
+        const existingUsers = await UserModel.find(
             { _id: { $in: objectIds } },
-            { $set: { isActive: false } }
-        );
-
-        // Lấy danh sách user bị ban (chỉ cần _id, name, phone, role)
-        const bannedUsers = await UserModel.find(
-            { _id: { $in: objectIds } },
-            "_id name phone role"
+            "_id name phone role isActive"
         ).lean();
 
+        const existingIds = existingUsers.map(u => u._id.toString());
+        const notFoundIds = userIds.filter(id => !existingIds.includes(id));
+
+        // Phân loại users
+        const usersToban = existingUsers.filter(u => u.isActive);
+        const alreadyBanned = existingUsers.filter(u => !u.isActive);
+
+        // Cập nhật trạng thái
+        let modified = 0;
+        if (usersToban.length > 0) {
+            const banIds = usersToban.map(u => u._id);
+            const result = await UserModel.updateMany(
+                { _id: { $in: banIds } },
+                { $set: { isActive: false } }
+            );
+            modified = result.modifiedCount;
+        }
+
         return {
-            modified: result.modifiedCount,
-            bannedUsers,
+            total: userIds.length,
+            modified,
+            alreadyBanned: alreadyBanned.length,
+            notFound: notFoundIds.length,
+            bannedUsers: usersToban.map(u => ({
+                _id: u._id.toString(),
+                name: u.name,
+                phone: u.phone,
+                role: u.role
+            })),
+            notFoundIds
+        };
+    }
+
+    async unbanUsers(userIds: string[]) {
+        if (!Array.isArray(userIds) || userIds.length === 0) {
+            throw AppError.badRequestError("Danh sách userIds không hợp lệ");
+        }
+
+        const objectIds = userIds.map(id => new mongoose.Types.ObjectId(id));
+
+        // Validate: Tìm users tồn tại
+        const existingUsers = await UserModel.find(
+            { _id: { $in: objectIds } },
+            "_id name phone role isActive"
+        ).lean();
+
+        const existingIds = existingUsers.map(u => u._id.toString());
+        const notFoundIds = userIds.filter(id => !existingIds.includes(id));
+
+        // Phân loại users
+        const usersToUnban = existingUsers.filter(u => !u.isActive);
+        const alreadyActive = existingUsers.filter(u => u.isActive);
+
+        // Cập nhật trạng thái
+        let modified = 0;
+        if (usersToUnban.length > 0) {
+            const unbanIds = usersToUnban.map(u => u._id);
+            const result = await UserModel.updateMany(
+                { _id: { $in: unbanIds } },
+                { $set: { isActive: true } }
+            );
+            modified = result.modifiedCount;
+        }
+
+        return {
+            total: userIds.length,
+            modified,
+            alreadyActive: alreadyActive.length,
+            notFound: notFoundIds.length,
+            unbannedUsers: usersToUnban.map(u => ({
+                _id: u._id.toString(),
+                name: u.name,
+                phone: u.phone,
+                role: u.role
+            })),
+            notFoundIds
         };
     }
 

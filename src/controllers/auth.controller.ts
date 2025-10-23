@@ -3,13 +3,14 @@ import AuthService from "../services/auth.service";
 import { NextFunction, Request, Response } from "express";
 import { asyncHandler } from "../middlewares/handleErorr.middleware";
 import ResponseFormat from "../utils/ResponseFormat";
-import { BanUserReqDto, LoginReqDto, StudentRegisterReqDto, VerifyOtpReqDto } from "../dtos/request/Auth.request.dto";
-import { BanUserResDto, RefreshTokenResDto, StudentLoginResDto, StudentRegisterResDto, StudentVerifyResDto } from "../dtos/response/Auth.response.dto";
+import { BanUserReqDto, LoginReqDto, StudentRegisterReqDto, UnbanUserReqDto, VerifyOtpReqDto } from "../dtos/request/Auth.request.dto";
+import { BanUserResDto, RefreshTokenResDto, StudentLoginResDto, StudentRegisterResDto, StudentVerifyResDto, UnbanUserResDto } from "../dtos/response/Auth.response.dto";
 import { instanceToPlain, plainToInstance } from "class-transformer";
 import { LogoutReqDto, RefreshTokenReqDto } from "../dtos/request/Auth.request.dto";
 import { LogoutResDto, LogoutAllResDto } from "../dtos/response/Auth.response.dto";
 import { JwtUserPayload } from "../utils/token.util";
 import AppError from "../utils/AppError";
+import { UserRole } from "../models/user.model";
 
 @injectable()
 export class AuthController {
@@ -17,36 +18,56 @@ export class AuthController {
         private authService: AuthService
     ) { }
 
-    login = asyncHandler(
+    // ✅ Admin login
+    adminLogin = asyncHandler(
         async (req: Request<{}, {}, LoginReqDto>, res: Response, next: NextFunction) => {
             const { phone, password } = req.body;
-            const user = await this.authService.login(phone, password);
+            const user = await this.authService.login(phone, password, UserRole.ADMIN);
 
-            // Chuẩn hóa đầu ra dto
             const userResDto = instanceToPlain(
-                plainToInstance(
-                    StudentLoginResDto,
-                    user,
-                    { excludeExtraneousValues: true }
-                )
+                plainToInstance(StudentLoginResDto, user, { excludeExtraneousValues: true })
             );
             return res.status(200).json(
-                ResponseFormat.successResponse(
-                    userResDto,
-                    "Đăng nhập thành công!",
-                    200,
-                    req.requestId
-                )
-            )
+                ResponseFormat.successResponse(userResDto, "Đăng nhập Admin thành công!", 200, req.requestId)
+            );
+        }
+    );
+
+    // ✅ Teacher login
+    teacherLogin = asyncHandler(
+        async (req: Request<{}, {}, LoginReqDto>, res: Response, next: NextFunction) => {
+            const { phone, password } = req.body;
+            const user = await this.authService.login(phone, password, UserRole.TEACHER);
+
+            const userResDto = instanceToPlain(
+                plainToInstance(StudentLoginResDto, user, { excludeExtraneousValues: true })
+            );
+            return res.status(200).json(
+                ResponseFormat.successResponse(userResDto, "Đăng nhập Teacher thành công!", 200, req.requestId)
+            );
+        }
+    );
+
+    // ✅ Student login
+    studentLogin = asyncHandler(
+        async (req: Request<{}, {}, LoginReqDto>, res: Response, next: NextFunction) => {
+            const { phone, password } = req.body;
+            const user = await this.authService.login(phone, password, UserRole.STUDENT);
+
+            const userResDto = instanceToPlain(
+                plainToInstance(StudentLoginResDto, user, { excludeExtraneousValues: true })
+            );
+            return res.status(200).json(
+                ResponseFormat.successResponse(userResDto, "Đăng nhập Student thành công!", 200, req.requestId)
+            );
         }
     );
 
     refreshToken = asyncHandler(
         async (req: Request<{}, {}, RefreshTokenReqDto>, res: Response, next: NextFunction) => {
-            const { refreshToken } = req.body;
+            const { refresh_token } = req.body;  // ✅ Đổi từ refreshToken
 
-            // Gọi service để xử lý refresh token
-            const result = await this.authService.refreshToken(refreshToken);
+            const result = await this.authService.refreshToken(refresh_token);
 
             // Chuẩn hóa đầu ra DTO
             const response = instanceToPlain(
@@ -70,8 +91,8 @@ export class AuthController {
 
     logout = asyncHandler(
         async (req: Request<{}, {}, LogoutReqDto>, res: Response, next: NextFunction) => {
-            const { refreshToken } = req.body;
-            const result = await this.authService.logout(refreshToken);
+            const { refresh_token } = req.body;  // ✅ Đổi từ refreshToken
+            const result = await this.authService.logout(refresh_token);
 
             const response = instanceToPlain(
                 plainToInstance(
@@ -192,7 +213,27 @@ export class AuthController {
             return res.status(200).json(
                 ResponseFormat.successResponse(
                     response,
-                    "Ban nhiều tài khoản thành công",
+                    "Ban người dùng thành công",
+                    200,
+                    req.requestId
+                )
+            );
+        }
+    );
+
+    unbanUsers = asyncHandler(
+        async (req: Request<{}, {}, UnbanUserReqDto>, res: Response, next: NextFunction) => {
+            const { userIds } = req.body;
+            const result = await this.authService.unbanUsers(userIds);
+
+            const response = instanceToPlain(
+                plainToInstance(UnbanUserResDto, result, { excludeExtraneousValues: true })
+            );
+
+            return res.status(200).json(
+                ResponseFormat.successResponse(
+                    response,
+                    "Bỏ ban người dùng thành công",
                     200,
                     req.requestId
                 )

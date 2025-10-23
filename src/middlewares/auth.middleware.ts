@@ -55,3 +55,27 @@ export const authorizeRoles = (...roles: UserRole[]) => async (req: Request, res
         next(err);
     }
 };
+
+// Optional Authentication: Không bắt buộc đăng nhập nhưng vẫn decode token nếu có
+export const optionalAuth = (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const authHeader = req.headers["authorization"];
+        if (!authHeader) {
+            // Không có token -> Cho qua, req.user = undefined
+            return next();
+        }
+
+        const token = authHeader.split(" ")[1];
+        if (!token) {
+            return next();
+        }
+
+        // Có token -> Verify và gán req.user
+        const decoded = verifyAccessToken(token);
+        req.user = decoded;
+        next();
+    } catch (error) {
+        // Token invalid -> Bỏ qua, cho qua với req.user = undefined
+        next();
+    }
+};

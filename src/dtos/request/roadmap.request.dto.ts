@@ -3,9 +3,6 @@ import { SkillGroup } from "../../models/course.model";
 
 // POST /admin/roadmaps
 export class CreateRoadmapReqDto {
-    @IsNotEmpty()
-    @IsMongoId()
-    certification_id!: string;
 
     @IsNotEmpty()
     @IsString()

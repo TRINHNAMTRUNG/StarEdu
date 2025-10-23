@@ -55,7 +55,7 @@ export class AssignTeachersReqDto {
 export class ToggleModifiableReqDto {
     @IsNotEmpty()
     @IsBoolean()
-    isModifiable!: boolean;
+    is_modifiable!: boolean;  // ✅ Đổi từ isModifiable
 
     @IsOptional()
     @IsString()

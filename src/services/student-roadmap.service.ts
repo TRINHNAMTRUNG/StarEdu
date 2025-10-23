@@ -10,11 +10,6 @@ class StudentRoadmapService {
             is_published: true
         };
 
-        // Filter by certification_id
-        if (filters?.certification_id) {
-            query.certification_id = filters.certification_id;
-        }
-
         // Filter by target_score
         if (filters?.min_target_score) {
             query.target_score = { $gte: Number(filters.min_target_score) };
@@ -33,8 +28,8 @@ class StudentRoadmapService {
 
         // Filter by skill_groups
         if (filters?.skill_groups) {
-            const skillGroups = Array.isArray(filters.skill_groups) 
-                ? filters.skill_groups 
+            const skillGroups = Array.isArray(filters.skill_groups)
+                ? filters.skill_groups
                 : [filters.skill_groups];
             query.skill_groups = { $in: skillGroups };
         }
@@ -60,7 +55,6 @@ class StudentRoadmapService {
             const final_price = roadmap.price * (1 - roadmap.discount_percentage / 100);
             return {
                 _id: roadmap._id.toString(),
-                certification_id: roadmap.certification_id.toString(),
                 title: roadmap.title,
                 description: roadmap.description,
                 skill_groups: roadmap.skill_groups,
@@ -91,7 +85,6 @@ class StudentRoadmapService {
                     }
                 }
             })
-            .populate("certification_id", "name type")
             .lean();
 
         if (!roadmap) {
@@ -118,16 +111,8 @@ class StudentRoadmapService {
             })) || []
         }));
 
-        // Type guard cho certification
-        const certification = roadmap.certification_id as any;
-
         return {
             _id: roadmap._id.toString(),
-            certification: {
-                _id: certification._id.toString(),
-                name: certification.name,
-                type: certification.type
-            },
             title: roadmap.title,
             description: roadmap.description,
             skill_groups: roadmap.skill_groups,

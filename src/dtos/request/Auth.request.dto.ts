@@ -1,4 +1,4 @@
-import { IsArray, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsPhoneNumber, IsString, IsUrl, Length, Matches } from "class-validator";
+import { IsArray, IsEnum, IsMongoId, IsNotEmpty, IsNumber, IsOptional, IsPhoneNumber, IsString, IsUrl, Length, Matches } from "class-validator";
 import { UserBaseReqDto } from "../UserBase";
 import { PickType } from "@nestjs/mapped-types";
 import { Gender } from "../../models/user.model";
@@ -6,13 +6,13 @@ import { Gender } from "../../models/user.model";
 export class RefreshTokenReqDto {
     @IsNotEmpty()
     @IsString()
-    refreshToken!: string;
+    refresh_token!: string;  // ✅ Đổi từ refreshToken
 }
 
 export class LogoutReqDto {
     @IsNotEmpty()
     @IsString()
-    refreshToken!: string;
+    refresh_token!: string;  // ✅ Đổi từ refreshToken
 }
 
 export class LoginReqDto extends PickType(UserBaseReqDto, [
@@ -88,7 +88,15 @@ export class VerifyOtpReqDto extends PickType(UserBaseReqDto, [
 // /admin/ban-users
 export class BanUserReqDto {
     @IsArray()
-    @IsString({ each: true })
+    @IsMongoId({ each: true })  // ✅ Thêm validate ObjectId
+    @IsNotEmpty({ each: true })
+    userIds!: string[];
+}
+
+// /admin/unban-users
+export class UnbanUserReqDto {
+    @IsArray()
+    @IsMongoId({ each: true })  // ✅ Thêm validate ObjectId
     @IsNotEmpty({ each: true })
     userIds!: string[];
 }
