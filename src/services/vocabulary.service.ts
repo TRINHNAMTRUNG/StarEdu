@@ -3,13 +3,14 @@ import mongoose from "mongoose";
 import VocabularySetModel from "../models/vocabulary.model";
 import { CreateSetReqDto, AddFlashCardsReqDto } from "../dtos/request/vocabulary.request.dto";
 import AppError from "../utils/AppError";
-import { getGeminiContentBatch } from "./gemini.service";
+import GeminiService from "./gemini.service";
 import { getAzureTTS } from "./azure.service";
-import pLimit from "p-limit";
-const CONCURRENT_GEMINI_LIMIT = 4; // Giảm từ 5 xuống 4 để tránh overload
-const geminiLimit = pLimit(CONCURRENT_GEMINI_LIMIT);
 @injectable()
 class VocabularyService {
+    constructor(
+        private geminiService: GeminiService
+    ) { }
+
     getVocabularySets = async (part_of_speech: string, page: number, limit: number) => {
         const query: any = {};
         if (part_of_speech) {
@@ -121,7 +122,7 @@ class VocabularyService {
         // 4️ Gọi Gemini BATCH cho TẤT CẢ từ cùng lúc
         try {
             // Bước 1: Gọi Gemini batch
-            const geminiResults = await getGeminiContentBatch(
+            const geminiResults = await this.geminiService.getGeminiContentBatch(
                 newTerms.map(card => ({
                     term: card.term.trim(),
                     mainMeaning: (card.main_meaning || "").trim(),

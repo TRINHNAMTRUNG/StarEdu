@@ -26,6 +26,12 @@ const envSchema = z.object({
     // --- THÔNG TIN GOOGLE GEMINI ---
     GEMINI_API_KEY: z.string().min(1),
 
+    // --- THÔNG TIN YOUTUBE DATA API v3
+    YOUTUBE_API_KEY: z.string().min(1),
+
+    // --- THÔNG TIN GOOGLE CLOUD TRANSLATE
+    GOOGLE_CLOUD_CREDENTIALS_JSON: z.string().min(1),
+
     // --- THÔNG TIN AZURE SPEECH (TTS) ---
     AZURE_SPEECH_KEY: z.string().min(1),
     AZURE_SPEECH_REGION: z.string().min(1),
@@ -57,6 +63,8 @@ const parsed = envSchema.safeParse({
     INFOBIP_MSG_ID: process.env.INFOBIP_MSG_ID,
 
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+    YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY,
+    GOOGLE_CLOUD_CREDENTIALS_JSON: process.env.GOOGLE_CLOUD_CREDENTIALS_JSON,
 
     AZURE_SPEECH_KEY: process.env.AZURE_SPEECH_KEY,
     AZURE_SPEECH_REGION: process.env.AZURE_SPEECH_REGION,

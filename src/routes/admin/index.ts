@@ -7,6 +7,7 @@ import adminCourseRoutes from "./course.routes";
 import adminRoadmapRoutes from "./roadmap.routes";
 import adminLessonRoutes from "./lesson.routes";
 import adminSectionRoutes from "./section.routes";
+import adminDictationRoutes from "./dictation.routes";
 
 const adminRouter = Router();
 
@@ -18,5 +19,6 @@ adminRouter.use("/courses", adminCourseRoutes);
 adminRouter.use("/roadmaps", adminRoadmapRoutes);
 adminRouter.use("/lessons", adminLessonRoutes);
 adminRouter.use("/sections", adminSectionRoutes);
+adminRouter.use("/dictations", adminDictationRoutes);
 
 export default adminRouter;
