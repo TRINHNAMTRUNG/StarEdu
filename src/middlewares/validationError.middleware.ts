@@ -51,14 +51,16 @@ const validateCore = (DTOClass: new () => any, validatorType: ValidatorType) => 
                     throw new Error("Invalid validator type");
             }
 
-            if (!dataSource || Object.values(dataSource).length === 0) {
+            // Cho phép query/params rỗng (vì có thể tất cả fields đều optional)
+            // Chỉ check empty cho BODY
+            if (validatorType === ValidatorType.BODY && (!dataSource || Object.keys(dataSource).length === 0)) {
                 throw AppError.badRequestError(
                     `${validatorType} data is empty`,
                     req.requestId
                 );
             }
 
-            const instanceDTO = plainToInstance(DTOClass, dataSource, {
+            const instanceDTO = plainToInstance(DTOClass, dataSource || {}, {
                 enableImplicitConversion: true
             });
 
@@ -72,18 +74,11 @@ const validateCore = (DTOClass: new () => any, validatorType: ValidatorType) => 
                 );
             }
 
-            // Gán lại DTO đã validate vào đúng vị trí
-            switch (validatorType) {
-                case ValidatorType.BODY:
-                    req.body = instanceDTO;
-                    break;
-                case ValidatorType.QUERY:
-                    req.query = instanceDTO;
-                    break;
-                case ValidatorType.PARAMS:
-                    req.params = instanceDTO;
-                    break;
+            // Chỉ gán lại DTO cho BODY (vì query và params là read-only)
+            if (validatorType === ValidatorType.BODY) {
+                req.body = instanceDTO;
             }
+            
             next();
         } catch (error) {
             next(error);

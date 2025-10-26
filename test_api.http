@@ -1,0 +1,11 @@
+### Test lấy danh sách test
+GET http://localhost:3000/api/student/tests
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### Test lấy chi tiết test
+GET http://localhost:3000/api/student/tests/68f4a366b2ff7f9f21cb7236
+Authorization: Bearer YOUR_TOKEN_HERE
+
+### Test lấy test với câu hỏi
+GET http://localhost:3000/api/student/tests/68f4a366b2ff7f9f21cb7236/questions
+Authorization: Bearer YOUR_TOKEN_HERE
