@@ -34,6 +34,8 @@ class TestAttemptService {
                     _id: existingAttempt._id.toString(),
                     test_id: existingAttempt.test_id.toString(),
                     started_at: existingAttempt.started_at,
+                    time_limit: existingAttempt.time_limit || test.time_limit || 120, // Include time_limit
+                    total_questions: existingAttempt.total_questions,
                     current_part: existingAttempt.current_part,
                     answers: existingAttempt.answers
                 }
@@ -167,8 +169,13 @@ class TestAttemptService {
         ).length;
 
         // Quy đổi điểm TOEIC (simplified - cần bảng quy đổi chính xác)
-        const listeningScore = this.convertToTOEICScore(listeningCorrect, listeningQuestions.length);
-        const readingScore = this.convertToTOEICScore(readingCorrect, readingQuestions.length);
+        // Handle case when test has no questions (avoid division by zero)
+        const listeningScore = listeningQuestions.length > 0 
+            ? this.convertToTOEICScore(listeningCorrect, listeningQuestions.length) 
+            : 0;
+        const readingScore = readingQuestions.length > 0 
+            ? this.convertToTOEICScore(readingCorrect, readingQuestions.length) 
+            : 0;
         const totalScore = listeningScore + readingScore;
 
         // Cập nhật attempt
@@ -180,7 +187,23 @@ class TestAttemptService {
         attempt.total_score = totalScore;
         attempt.time_used = timeUsed;
 
-        await attempt.save();
+        console.log('📊 Attempting to save with scores:', {
+            correctAnswers,
+            listeningScore,
+            readingScore,
+            totalScore,
+            timeUsed,
+            listeningQuestionsCount: listeningQuestions.length,
+            readingQuestionsCount: readingQuestions.length
+        });
+
+        try {
+            await attempt.save();
+        } catch (saveError: any) {
+            console.error('❌ Database save error:', saveError);
+            console.error('❌ Validation errors:', saveError.errors);
+            throw AppError.internalServerError(`Lỗi lưu kết quả: ${saveError.message}`);
+        }
 
         return {
             message: "Hoàn thành bài thi",

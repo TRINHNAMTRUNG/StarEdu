@@ -1,4 +1,4 @@
-import { IsArray, IsEnum, IsMongoId, IsNotEmpty, IsNumber, IsOptional, IsPhoneNumber, IsString, IsUrl, Length, Matches } from "class-validator";
+import { IsArray, IsEnum, IsMongoId, IsNotEmpty, IsNumber, IsOptional, IsPhoneNumber, IsString, IsUrl, Length, Matches, ValidateNested } from "class-validator";
 import { UserBaseReqDto } from "../UserBase";
 import { PickType } from "@nestjs/mapped-types";
 import { Gender } from "../../models/user.model";
@@ -20,7 +20,7 @@ export class QualificationDto {
     institution!: string;
 
     @IsNotEmpty()
-    issueDate!: Date;
+    issue_date!: Date;
 }
 
 export class CreateTeacherReqDto extends PickType(UserBaseReqDto, [
@@ -50,9 +50,10 @@ export class CreateTeacherReqDto extends PickType(UserBaseReqDto, [
 
     @IsOptional()
     @IsNumber()
-    experienceYears?: number;
+    experience_years?: number;
 
     @IsOptional()
+    @ValidateNested({ each: true })
     @Type(() => QualificationDto)
     qualifications?: QualificationDto[];
 }
@@ -84,9 +85,10 @@ export class UpdateTeacherByAdminReqDto {
 
     @IsOptional()
     @IsNumber()
-    experienceYears?: number;
+    experience_years?: number;
 
     @IsOptional()
+    @ValidateNested({ each: true })
     @Type(() => QualificationDto)
     qualifications?: QualificationDto[];
 }

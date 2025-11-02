@@ -24,7 +24,10 @@ adminCertificationRoutes.post(
 );
 
 // GET /admin/certifications
-adminCertificationRoutes.get("/", certificationController.getCertificationList);
+adminCertificationRoutes.get(
+    "/",
+    certificationController.getCertificationList
+);
 
 // PATCH /admin/certifications/:id
 adminCertificationRoutes.patch(

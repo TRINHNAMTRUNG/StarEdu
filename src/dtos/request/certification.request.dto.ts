@@ -23,10 +23,6 @@ export class CreateCertificationReqDto {
     @IsOptional()
     @IsNumber()
     validityPeriod?: number;
-
-    @IsOptional()
-    @IsNumber()
-    passingScore?: number;
 }
 
 // PATCH /admin/certifications/:id
@@ -51,10 +47,6 @@ export class UpdateCertificationReqDto {
     @IsOptional()
     @IsNumber()
     validityPeriod?: number;
-
-    @IsOptional()
-    @IsNumber()
-    passingScore?: number;
 }
 
 // DELETE /admin/certifications/:id

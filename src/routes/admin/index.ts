@@ -8,17 +8,26 @@ import adminRoadmapRoutes from "./roadmap.routes";
 import adminLessonRoutes from "./lesson.routes";
 import adminSectionRoutes from "./section.routes";
 import adminTestRoutes from "./test.routes";
+import adminDictationRoutes from "./dictation.routes";
+import adminUserRoutes from "./user.routes";
+import { authenticateToken, authorizeRoles } from "../../middlewares/auth.middleware";
+import { UserRole } from "../../models/user.model";
 
 const adminRouter = Router();
 
+// Public routes (không cần authentication)
 adminRouter.use("/auth", adminAuthRoutes);
-adminRouter.use("/teachers", adminTeacherRoutes);
-adminRouter.use("/vocabulary", adminVocabularyRoutes);
-adminRouter.use("/certifications", adminCertificationRoutes);
-adminRouter.use("/courses", adminCourseRoutes);
-adminRouter.use("/roadmaps", adminRoadmapRoutes);
-adminRouter.use("/lessons", adminLessonRoutes);
-adminRouter.use("/sections", adminSectionRoutes);
-adminRouter.use("/tests", adminTestRoutes);
+
+// Protected routes (chỉ admin mới truy cập được)
+adminRouter.use("/teachers", authenticateToken, authorizeRoles(UserRole.ADMIN), adminTeacherRoutes);
+adminRouter.use("/vocabulary", authenticateToken, authorizeRoles(UserRole.ADMIN), adminVocabularyRoutes);
+adminRouter.use("/certifications", authenticateToken, authorizeRoles(UserRole.ADMIN), adminCertificationRoutes);
+adminRouter.use("/courses", authenticateToken, authorizeRoles(UserRole.ADMIN), adminCourseRoutes);
+adminRouter.use("/roadmaps", authenticateToken, authorizeRoles(UserRole.ADMIN), adminRoadmapRoutes);
+adminRouter.use("/lessons", authenticateToken, authorizeRoles(UserRole.ADMIN), adminLessonRoutes);
+adminRouter.use("/sections", authenticateToken, authorizeRoles(UserRole.ADMIN), adminSectionRoutes);
+adminRouter.use("/tests", authenticateToken, authorizeRoles(UserRole.ADMIN), adminTestRoutes);
+adminRouter.use("/dictations", authenticateToken, authorizeRoles(UserRole.ADMIN), adminDictationRoutes);
+adminRouter.use("/users", authenticateToken, authorizeRoles(UserRole.ADMIN), adminUserRoutes);
 
 export default adminRouter;

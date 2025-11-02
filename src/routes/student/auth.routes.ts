@@ -27,7 +27,7 @@ studentAuthRoutes.post(
 studentAuthRoutes.post(
     "/login",
     validationBody(LoginReqDto),
-    authController.login
+    authController.studentLogin  // ✅ Đổi sang studentLogin
 );
 studentAuthRoutes.post(
     "/logout",

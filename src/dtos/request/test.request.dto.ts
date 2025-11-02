@@ -145,3 +145,85 @@ export class GetTestWithQuestionsQueryDto {
     @Type(() => Number)
     part?: number;
 }
+
+// ========== QUESTION DTOs ==========
+
+export class CreateQuestionReqDto {
+    @IsNumber()
+    part!: number;
+
+    @IsNumber()
+    questionNumber!: number;
+
+    @IsString()
+    questionText!: string;
+
+    @IsOptional()
+    @IsString()
+    audio?: string;
+
+    @IsOptional()
+    @IsString()
+    image?: string;
+
+    @IsOptional()
+    @IsString()
+    contextHtml?: string;
+
+    @IsOptional()
+    @IsString()
+    transcript?: string;
+
+    @IsOptional()
+    options?: {
+        A?: string;
+        B?: string;
+        C?: string;
+        D?: string;
+    };
+
+    @IsString()
+    answer!: string;
+
+    @IsOptional()
+    @IsString()
+    explanation?: string;
+}
+
+export class UpdateQuestionReqDto {
+    @IsOptional()
+    @IsString()
+    questionText?: string;
+
+    @IsOptional()
+    @IsString()
+    audio?: string;
+
+    @IsOptional()
+    @IsString()
+    image?: string;
+
+    @IsOptional()
+    @IsString()
+    contextHtml?: string;
+
+    @IsOptional()
+    @IsString()
+    transcript?: string;
+
+    @IsOptional()
+    options?: {
+        A?: string;
+        B?: string;
+        C?: string;
+        D?: string;
+    };
+
+    @IsOptional()
+    @IsString()
+    answer?: string;
+
+    @IsOptional()
+    @IsString()
+    explanation?: string;
+}

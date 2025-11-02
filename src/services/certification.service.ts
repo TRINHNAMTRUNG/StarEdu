@@ -11,23 +11,21 @@ class CertificationService {
      */
     createCertification = async (dto: CreateCertificationReqDto) => {
         const certification = await CertificationModel.create(dto);
-        return certification.toObject();
+        return {
+            ...certification.toObject(),
+            _id: certification._id.toString()
+        };
     };
 
     /**
-     * Lấy danh sách chứng chỉ (có phân trang)
+     * Lấy danh sách chứng chỉ (không phân trang)
      */
-    getCertificationList = async (page: number = 1, limit: number = 10) => {
-        const [total, certifications] = await Promise.all([
-            CertificationModel.countDocuments(),
-            CertificationModel.find()
-                .sort({ createdAt: -1 })
-                .skip((page - 1) * limit)
-                .limit(limit)
-                .lean()
-        ]);
-
-        return { total, page, limit, data: certifications };
+    getCertifications = async () => {
+        const certifications = await CertificationModel.find().lean();
+        return certifications.map(cert => ({
+            ...cert,
+            _id: cert._id.toString()
+        }));
     };
 
     /**
@@ -38,17 +36,20 @@ class CertificationService {
             throw AppError.badRequestError("ID chứng chỉ không hợp lệ");
         }
 
-        const certification = await CertificationModel.findByIdAndUpdate(
+        const updated = await CertificationModel.findByIdAndUpdate(
             id,
             { $set: dto },
-            { new: true }
+            { new: true, runValidators: true }
         ).lean();
 
-        if (!certification) {
+        if (!updated) {
             throw AppError.notFoundError("Chứng chỉ không tồn tại");
         }
 
-        return certification;
+        return {
+            ...updated,
+            _id: updated._id.toString()
+        };
     };
 
     /**

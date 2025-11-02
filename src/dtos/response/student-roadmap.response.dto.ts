@@ -6,9 +6,6 @@ export class StudentRoadmapListItemResDto {
     _id!: string;
 
     @Expose()
-    certification_id!: string;
-
-    @Expose()
     title!: string;
 
     @Expose()

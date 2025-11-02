@@ -9,10 +9,10 @@ import { CourseIdParamDto } from "../../dtos/request/course.request.dto";
 const studentCourseRoutes = Router();
 const studentCourseController = container.resolve(StudentCourseController);
 
-// API #1: GET /student/courses (public - KHONG can auth)
+// API #1: GET /student/courses (public)
 studentCourseRoutes.get("/", studentCourseController.getCourses);
 
-// API #2: GET /student/courses/:id (public - KHONG can auth)
+// API #2: GET /student/courses/:id (public)
 studentCourseRoutes.get(
     "/:id",
     validationParams(CourseIdParamDto),

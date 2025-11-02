@@ -5,10 +5,10 @@ import { UserBaseResDto } from "../UserBase";
 // /refresh-token
 export class RefreshTokenResDto {
     @Expose()
-    accessToken!: string;
+    access_token!: string;  // ✅ Đổi từ accessToken
 
     @Expose()
-    refreshToken!: string;
+    refresh_token!: string;  // ✅ Đổi từ refreshToken
 }
 
 /**
@@ -25,30 +25,34 @@ export class StudentRegisterResDto extends PickType(UserBaseResDto, [
 
 // /student/verify-account
 export class StudentVerifyResDto extends PickType(UserBaseResDto, [
+    '_id',
+    'role',
     'avatar',
     'phone',
     'name',
     'gender'
 ]) {
     @Expose()
-    accessToken!: string;
+    access_token!: string;  // ✅ Đổi từ accessToken
 
     @Expose()
-    refreshToken!: string;
+    refresh_token!: string;  // ✅ Đổi từ refreshToken
 }
 
 // /student/login
 export class StudentLoginResDto extends PickType(UserBaseResDto, [
+    '_id',
+    'role',
     'avatar',
     'phone',
     'name',
     'gender'
 ]) {
     @Expose()
-    accessToken!: string;
+    access_token!: string;  // ✅ Đổi từ accessToken
 
     @Expose()
-    refreshToken!: string;
+    refresh_token!: string;  // ✅ Đổi từ refreshToken
 }
 
 /**
@@ -72,13 +76,48 @@ export class BannedUserItem {
     role!: string;
 }
 
+// /admin/ban-users (cải thiện)
 export class BanUserResDto {
+    @Expose()
+    total!: number;
+
     @Expose()
     modified!: number;
 
     @Expose()
+    alreadyBanned!: number;
+
+    @Expose()
+    notFound!: number;
+
+    @Expose()
     @Type(() => BannedUserItem)
     bannedUsers!: BannedUserItem[];
+
+    @Expose()
+    notFoundIds!: string[];
+}
+
+// /admin/unban-users
+export class UnbanUserResDto {
+    @Expose()
+    total!: number;
+
+    @Expose()
+    modified!: number;
+
+    @Expose()
+    alreadyActive!: number;
+
+    @Expose()
+    notFound!: number;
+
+    @Expose()
+    @Type(() => BannedUserItem)
+    unbannedUsers!: BannedUserItem[];
+
+    @Expose()
+    notFoundIds!: string[];
 }
 
 

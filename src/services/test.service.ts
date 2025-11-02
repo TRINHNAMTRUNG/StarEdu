@@ -3,6 +3,7 @@ import { TestModel } from "../models/test.model";
 import { QuestionModel } from "../models/question.model";
 import AppError from "../utils/AppError";
 import mongoose from "mongoose";
+import { uploadToS3 } from "../config/s3";
 
 @injectable()
 class TestService {
@@ -265,6 +266,96 @@ class TestService {
         }
 
         return { message: "Xóa đề thi thành công" };
+    };
+
+    /**
+     * Tạo câu hỏi mới và thêm vào test
+     */
+    createQuestion = async (testId: string, questionData: any) => {
+        // Validate test exists
+        const test = await TestModel.findById(testId);
+        if (!test) {
+            throw AppError.notFoundError("Đề thi không tồn tại");
+        }
+
+        // Create question
+        const question = await QuestionModel.create({
+            part: questionData.part,
+            type: "single",
+            questionNumber: questionData.questionNumber,
+            questionText: questionData.questionText,
+            audio: questionData.audio,
+            image: questionData.image,
+            contextHtml: questionData.contextHtml,
+            transcript: questionData.transcript,
+            options: questionData.options,
+            answer: questionData.answer,
+            explanation: questionData.explanation
+        });
+
+        // Add question to test's part
+        const partIndex = test.parts.findIndex(p => p.partNumber === questionData.part);
+        if (partIndex >= 0) {
+            test.parts[partIndex].questionIds.push(question._id as any);
+        } else {
+            // Create new part if not exists
+            test.parts.push({
+                partNumber: questionData.part,
+                questionIds: [question._id as any]
+            });
+        }
+
+        await test.save();
+
+        return {
+            message: "Tạo câu hỏi thành công",
+            question: this.formatQuestionWithAnswer(question),
+            questionId: question._id
+        };
+    };
+
+    /**
+     * Cập nhật câu hỏi
+     */
+    updateQuestion = async (questionId: string, updateData: any) => {
+        const question = await QuestionModel.findByIdAndUpdate(
+            questionId,
+            { $set: updateData },
+            { new: true, runValidators: true }
+        );
+
+        if (!question) {
+            throw AppError.notFoundError("Câu hỏi không tồn tại");
+        }
+
+        return {
+            message: "Cập nhật câu hỏi thành công",
+            question: this.formatQuestionWithAnswer(question)
+        };
+    };
+
+    /**
+     * Upload media file (audio/image) to S3
+     */
+    uploadMedia = async (file: Express.Multer.File, type: 'audio' | 'image') => {
+        const timestamp = Date.now();
+        const folder = type === 'audio' ? 'audios/tests' : 'images/tests';
+        const extension = file.originalname.split('.').pop();
+        const key = `${folder}/${timestamp}.${extension}`;
+
+        // Determine content type
+        let contentType = file.mimetype;
+        if (!contentType) {
+            contentType = type === 'audio' ? 'audio/mpeg' : 'image/jpeg';
+        }
+
+        // Upload to S3
+        const url = await uploadToS3(key, file.buffer, contentType);
+
+        return {
+            message: `${type === 'audio' ? 'Audio' : 'Image'} uploaded successfully`,
+            url: url
+        };
     };
 
     // ============ HELPER METHODS ============

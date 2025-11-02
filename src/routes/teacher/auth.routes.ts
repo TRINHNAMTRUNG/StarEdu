@@ -14,7 +14,7 @@ const upload = multer({ storage: storage });
 teacherAuthRoutes.post(
     "/login",
     validationBody(LoginReqDto),
-    authController.login
+    authController.teacherLogin
 );
 
 teacherAuthRoutes.post(

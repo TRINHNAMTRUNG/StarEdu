@@ -10,8 +10,9 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// CORS configuration: Allow all origins in development, specific origin in production
 app.use(cors({
-    origin: ENV.ORIGIN,
+    origin: ENV.NODE_ENV === 'development' ? true : ENV.ORIGIN,
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Authorization", "Content-Type"]

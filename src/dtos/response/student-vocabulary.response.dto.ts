@@ -19,6 +19,12 @@ export class StudentVocabularySetListItemResDto {
 
     @Expose()
     total_cards!: number;
+
+    @Expose()
+    is_free!: boolean;
+
+    @Expose()
+    is_locked!: boolean;
 }
 
 export class GetStudentVocabularySetsResDto {
@@ -82,6 +88,12 @@ export class GetStudentVocabularySetDetailResDto {
 
     @Expose()
     description?: string;
+
+    @Expose()
+    is_free!: boolean;
+
+    @Expose()
+    is_locked!: boolean;
 
     @Expose()
     @Type(() => StudentFlashCardResDto)

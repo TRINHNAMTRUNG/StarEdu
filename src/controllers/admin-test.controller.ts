@@ -77,6 +77,61 @@ class AdminTestController {
             next(error);
         }
     };
+
+    /**
+     * POST /api/admin/tests/:testId/questions - Tạo câu hỏi mới
+     */
+    createQuestion = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { testId } = req.params;
+            const result = await this.testService.createQuestion(testId, req.body);
+            res.status(201).json(ResponseFormat.successResponse(result));
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * PUT /api/admin/tests/:testId/questions/:questionId - Cập nhật câu hỏi
+     */
+    updateQuestion = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { questionId } = req.params;
+            const result = await this.testService.updateQuestion(questionId, req.body);
+            res.json(ResponseFormat.successResponse(result));
+        } catch (error) {
+            next(error);
+        }
+    };
+
+    /**
+     * POST /api/admin/tests/upload-media - Upload audio/image file to S3
+     */
+    uploadMedia = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            if (!req.file) {
+                return res.status(400).json(ResponseFormat.errorResponse(
+                    "No file uploaded", 
+                    400, 
+                    "FILE_REQUIRED"
+                ));
+            }
+
+            const type = req.body.type as 'audio' | 'image';
+            if (!type || !['audio', 'image'].includes(type)) {
+                return res.status(400).json(ResponseFormat.errorResponse(
+                    "Invalid type. Must be 'audio' or 'image'", 
+                    400, 
+                    "INVALID_TYPE"
+                ));
+            }
+
+            const result = await this.testService.uploadMedia(req.file, type);
+            res.json(ResponseFormat.successResponse(result));
+        } catch (error) {
+            next(error);
+        }
+    };
 }
 
 export default AdminTestController;

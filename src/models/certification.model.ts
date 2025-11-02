@@ -12,8 +12,7 @@ const CertificationSchema = new Schema({
     description: { type: String },
     issuer: { type: String, required: true },
     validityPeriod: { type: Number }, // Thời hạn hiệu lực (tháng)
-    passingScore: { type: Number }, // Điểm đạt
-    
+
 }, { timestamps: true, collection: "certifications" });
 
 export type ICertification = InferSchemaType<typeof CertificationSchema>;

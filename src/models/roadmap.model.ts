@@ -10,7 +10,6 @@ export enum SkillGroup {
 }
 
 const RoadmapSchema = new Schema({
-    certification_id: { type: Schema.Types.ObjectId, ref: "Certification", required: true }, // Thuộc chứng chỉ nào (IELTS/TOEIC/TOEFL)
     title: { type: String, required: true },
     description: { type: String },
     skill_groups: [{ type: String, enum: Object.values(SkillGroup) }], // Tập trung vào kỹ năng nào
@@ -23,7 +22,7 @@ const RoadmapSchema = new Schema({
 }, { timestamps: true, collection: "roadmaps" });
 
 // Virtual field: Giá sau giảm
-RoadmapSchema.virtual("final_price").get(function() {
+RoadmapSchema.virtual("final_price").get(function () {
     return this.price * (1 - this.discount_percentage / 100);
 });
 

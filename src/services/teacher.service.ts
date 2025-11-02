@@ -1,4 +1,3 @@
-
 import { injectable } from "tsyringe";
 import TeacherModel, { EmploymentStatus } from "../models/teacher.model";
 import AppError from "../utils/AppError";
@@ -10,9 +9,8 @@ import mongoose from "mongoose";
 @injectable()
 class TeacherService {
     createTeacher = async (teacherInfo: CreateTeacherReqDto) => {
-        const { phone, password, name, gender, avatar, experienceYears, qualifications } = teacherInfo;
+        const { phone, password, name, gender, avatar, experience_years, qualifications } = teacherInfo;
 
-        // Kiểm tra xem tài khoản đã tồn tại chưa
         const existingUser = await UserModel.findOne({ phone });
         if (existingUser) {
             throw AppError.conflictError("Số điện thoại đã được sử dụng");
@@ -33,20 +31,31 @@ class TeacherService {
         // Tạo Teacher mới
         const teacher = await TeacherModel.create({
             user: user._id.toString(),
-            experienceYears: experienceYears || 0,
+            experience_years: experience_years || 0,  // ✅ Không cần transform
             qualifications: qualifications || [],
         });
 
-        return { user: user.toObject(), teacher: teacher.toObject() };
+        // Populate user để trả về cùng structure với getTeacherList
+        const populatedTeacher = await TeacherModel.findById(teacher._id)
+            .populate("user", "name phone avatar gender _id")
+            .lean();
+
+        return {
+            ...populatedTeacher,
+            _id: populatedTeacher!._id.toString(),
+            user: {
+                ...populatedTeacher!.user,
+                _id: populatedTeacher!.user._id.toString()
+            }
+        };
     };
 
     updateTeacherInfoByAdmin = async (userId: string, updateData: UpdateTeacherByAdminReqDto) => {
-        // Kiểm tra xem giảng viên có tồn tại không
-        // Kiểm tra xem user có tồn tại không
         const [teacherExists, userExists] = await Promise.all([
             TeacherModel.findOne({ user: userId }),
             UserModel.findById(userId)
         ]);
+        
         if (!teacherExists) {
             throw AppError.notFoundError("Giảng viên không tồn tại");
         }
@@ -79,23 +88,37 @@ class TeacherService {
             await teacherExists.save();
         }
 
-        return { user: userExists, teacher: teacherExists };
+        // Populate user để trả về cùng structure
+        const populatedTeacher = await TeacherModel.findById(teacherExists._id)
+            .populate("user", "name phone avatar gender _id")
+            .lean();
+
+        return {
+            ...populatedTeacher,
+            _id: populatedTeacher!._id.toString(),
+            user: {
+                ...populatedTeacher!.user,
+                _id: populatedTeacher!.user._id.toString()
+            }
+        };
     };
 
     getTeacherList = async () => {
-        // Lấy danh sách giảng viên
         const teachers = await TeacherModel.find()
-            .populate("user", "name phone avatar gender")
+            .populate("user", "name phone avatar gender _id")
             .lean();
 
         return teachers.map((teacher) => ({
             ...teacher,
-            user: teacher.user
+            _id: teacher._id.toString(),
+            user: {
+                ...teacher.user,
+                _id: teacher.user._id.toString()
+            }
         }));
     };
 
     getTeacherById = async (userId: string) => {
-        // Lấy giảng viên theo id
         const teacher = await TeacherModel.findOne({ user: userId })
             .populate("user", "name phone avatar gender");
 
@@ -103,24 +126,34 @@ class TeacherService {
             throw AppError.notFoundError("Giảng viên không tồn tại");
         }
 
-        return teacher.toObject();
+        return {
+            ...teacher.toObject(),
+            _id: teacher._id.toString()
+        };
     };
 
-    async setTeacherStatus(
-        teacherIds: string[],
-        status: EmploymentStatus
-    ): Promise<{ modifiedCount: number; updatedTeachers: any[] }> {
-
+    async setTeacherStatus(teacherIds: string[], status: EmploymentStatus) {
         if (!Array.isArray(teacherIds) || teacherIds.length === 0) {
             throw AppError.badRequestError("Danh sách teacherIds không hợp lệ");
         }
 
         const objectIds = teacherIds.map(id => new mongoose.Types.ObjectId(id));
 
-        // Cập nhật
-        const result = await TeacherModel.updateMany(
+        // Lấy danh sách teachers để lấy user IDs
+        const teachers = await TeacherModel.find({ _id: { $in: objectIds } }).select("user").lean();
+        const userIds = teachers.map(t => t.user);
+
+        // Cập nhật Teacher employment_status
+        const resultTeacher = await TeacherModel.updateMany(
             { _id: { $in: objectIds } },
             { $set: { employment_status: status } }
+        );
+
+        // Cập nhật User isActive (active = true, inactive = false)
+        const isActive = status === EmploymentStatus.ACTIVE;
+        await UserModel.updateMany(
+            { _id: { $in: userIds } },
+            { $set: { isActive } }
         );
 
         // Lấy danh sách giảng viên sau khi update
@@ -130,8 +163,12 @@ class TeacherService {
         ).lean();
 
         return {
-            modifiedCount: result.modifiedCount,
-            updatedTeachers
+            modifiedCount: resultTeacher.modifiedCount,
+            updatedTeachers: updatedTeachers.map(t => ({
+                ...t,
+                _id: t._id.toString(),
+                user: t.user.toString()
+            }))
         };
     }
 }

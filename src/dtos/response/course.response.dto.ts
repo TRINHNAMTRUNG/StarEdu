@@ -47,11 +47,14 @@ export class CreateCourseResDto {
     is_published!: boolean;
 
     @Expose()
-    isModifiable!: boolean;
+    is_modifiable!: boolean;  // ✅ Đổi từ isModifiable
 
     @Expose()
     @Type(() => CourseTeacherResDto)
     assigned_teachers!: CourseTeacherResDto[];
+
+    @Expose()
+    last_modified_at?: Date;  // ✅ Đổi từ lastModifiedAt
 }
 
 // GET /admin/courses (list item)
@@ -200,7 +203,7 @@ export class ToggleModifiableResDto {
     title!: string;
 
     @Expose()
-    isModifiable!: boolean;
+    is_modifiable!: boolean;  // ✅ Đổi từ isModifiable
 
     @Expose()
     last_modified_by?: string;

@@ -9,80 +9,45 @@ import { CreateTeacherResDto, UpdateTeacherResDto, GetTeacherListResDto, SetTeac
 
 @injectable()
 class TeacherController {
-    constructor(private teacherService: TeacherService) { }
+    constructor(private readonly teacherService: TeacherService) {}
 
-    createTeacher = asyncHandler(
-        async (req: Request<{}, {}, CreateTeacherReqDto>, res: Response, next: NextFunction) => {
-            const teacherInfo: CreateTeacherReqDto = req.body;
-            const { user, teacher } = await this.teacherService.createTeacher(teacherInfo);
+    createTeacher = asyncHandler(async (req: Request, res: Response) => {
+        const dto: CreateTeacherReqDto = req.body;
+        const result = await this.teacherService.createTeacher(dto);
 
-            // Chuẩn hóa đầu ra dto
-            const teacherResDto = instanceToPlain(
-                plainToInstance(
-                    CreateTeacherResDto,
-                    { phone: user.phone, name: user.name, avatar: user.avatar, teacher },
-                    { excludeExtraneousValues: true }
-                )
-            );
+        const response = instanceToPlain(
+            plainToInstance(CreateTeacherResDto, result, { excludeExtraneousValues: true })
+        );
 
-            return res.status(201).json(
-                ResponseFormat.successResponse(
-                    teacherResDto,
-                    "Tạo giảng viên thành công",
-                    201,
-                    req.requestId
-                )
-            );
-        }
-    );
+        return res.status(201).json(
+            ResponseFormat.successResponse(response, "Tạo giảng viên thành công", 201, req.requestId)
+        );
+    });
 
-    updateTeacherInfoByAdmin = asyncHandler(
-        async (req: Request<IdParamDto, {}, UpdateTeacherByAdminReqDto>, res: Response, next: NextFunction) => {
-            const { userId } = req.params;
-            const updateData: UpdateTeacherByAdminReqDto = req.body;
+    updateTeacherInfoByAdmin = asyncHandler(async (req: Request, res: Response) => {
+        const { userId } = req.params;
+        const dto: UpdateTeacherByAdminReqDto = req.body;
+        const result = await this.teacherService.updateTeacherInfoByAdmin(userId, dto);
 
-            const { user, teacher } = await this.teacherService.updateTeacherInfoByAdmin(userId, updateData);
+        const response = instanceToPlain(
+            plainToInstance(UpdateTeacherResDto, result, { excludeExtraneousValues: true })
+        );
 
-            // Chuẩn hóa đầu ra dto
-            const teacherResDto = instanceToPlain(
-                plainToInstance(
-                    UpdateTeacherResDto,
-                    { phone: user.phone, name: user.name, avatar: user.avatar, teacher },
-                    { excludeExtraneousValues: true }
-                )
-            );
-
-            return res.status(200).json(
-                ResponseFormat.successResponse(
-                    teacherResDto,
-                    "Cập nhật thông tin giảng viên thành công",
-                    200,
-                    req.requestId
-                )
-            );
-        }
-    );
+        return res.status(200).json(
+            ResponseFormat.successResponse(response, "Cập nhật thông tin giảng viên thành công", 200, req.requestId)
+        );
+    });
 
     getTeacherList = asyncHandler(
-        async (req: Request, res: Response, next: NextFunction) => {
-            const teachers = await this.teacherService.getTeacherList();
+        async (req: Request, res: Response) => {
+            const result = await this.teacherService.getTeacherList();
 
-            // Chuẩn hóa đầu ra dto
-            const teacherListResDto = instanceToPlain(
-                plainToInstance(
-                    GetTeacherListResDto,
-                    { data: teachers },
-                    { excludeExtraneousValues: true }
-                )
+            const response = instanceToPlain(
+                plainToInstance(GetTeacherListResDto, { data: result }, { excludeExtraneousValues: true })
             );
 
             return res.status(200).json(
-                ResponseFormat.successResponse(
-                    teacherListResDto.data,
-                    "Lấy danh sách giảng viên thành công",
-                    200,
-                    req.requestId
-                )
+                ResponseFormat.successResponse(response, "Lấy danh sách giảng viên thành công", 200, req.requestId)
             );
         }
     );

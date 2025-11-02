@@ -44,6 +44,12 @@ export class UserBaseReqDto {
 
 export class UserBaseResDto {
     @Expose()
+    _id!: string;
+
+    @Expose()
+    role!: string;
+
+    @Expose()
     access_token!: string;
 
     @Expose()

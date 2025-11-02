@@ -21,9 +21,6 @@ export class CreateRoadmapResDto {
     _id!: string;
 
     @Expose()
-    certification_id!: string;
-
-    @Expose()
     title!: string;
 
     @Expose()
@@ -100,7 +97,7 @@ export class GetRoadmapDetailResDto extends CreateRoadmapResDto {
     updatedAt!: Date;
 }
 
-export class UpdateRoadmapResDto extends CreateRoadmapResDto {}
+export class UpdateRoadmapResDto extends CreateRoadmapResDto { }
 
 export class DeleteRoadmapResDto {
     @Expose()
@@ -121,6 +118,6 @@ export class PublishRoadmapResDto {
     is_published!: boolean;
 }
 
-export class AddCoursesResDto extends CreateRoadmapResDto {}
+export class AddCoursesResDto extends CreateRoadmapResDto { }
 
-export class RemoveCourseResDto extends CreateRoadmapResDto {}
+export class RemoveCourseResDto extends CreateRoadmapResDto { }
