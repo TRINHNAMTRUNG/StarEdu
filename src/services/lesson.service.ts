@@ -135,6 +135,21 @@ class LessonService {
         return lesson;
     };
 
+    // API #3.1: Lay danh sach sections cua lesson
+    getLessonSections = async (lessonId: string) => {
+        const sections = await mongoose.connection
+            .collection("sections")
+            .find({ lesson_id: new mongoose.Types.ObjectId(lessonId) })
+            .sort({ order: 1 })
+            .toArray();
+
+        return sections.map(s => ({
+            ...s,
+            _id: s._id.toString(),
+            lesson_id: s.lesson_id.toString()
+        }));
+    };
+
     // API #4: Cap nhat lesson
     updateLesson = async (id: string, dto: UpdateLessonReqDto) => {
         const lesson = await LessonModel.findById(id);

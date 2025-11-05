@@ -43,11 +43,24 @@ class TestAttemptService {
         }
 
         // Tạo attempt mới
+        // Calculate total questions by counting subQuestions within groups
+        const allQuestionIds = test.parts.flatMap(part => part.questionIds);
+        const questions = await QuestionModel.find({ _id: { $in: allQuestionIds } });
+        
+        let totalQuestions = 0;
+        for (const question of questions) {
+            if (question.type === 'group') {
+                totalQuestions += question.subQuestions?.length || 0;
+            } else {
+                totalQuestions += 1;
+            }
+        }
+        
         const attempt = await TestAttemptModel.create({
             user_id: userId,
             test_id: testId,
             time_limit: test.time_limit,
-            total_questions: test.parts.reduce((sum, part) => sum + part.questionIds.length, 0)
+            total_questions: totalQuestions
         });
 
         return {
@@ -311,7 +324,17 @@ class TestAttemptService {
         const questionIds: string[] = [];
         for (const part of test.parts) {
             if (parts.includes(part.partNumber)) {
-                questionIds.push(...part.questionIds.map((id: any) => id.toString()));
+                // Get all questions for this part
+                const questions = await QuestionModel.find({ _id: { $in: part.questionIds } });
+                
+                // Expand group questions into their subQuestions
+                for (const question of questions) {
+                    if (question.type === 'group' && question.subQuestions) {
+                        questionIds.push(...question.subQuestions.map((id: any) => id.toString()));
+                    } else {
+                        questionIds.push(question._id.toString());
+                    }
+                }
             }
         }
         return questionIds;

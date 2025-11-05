@@ -1,6 +1,7 @@
 import { injectable } from "tsyringe";
 import CourseModel from "../models/course.model";
 import LessonModel from "../models/lesson.model";
+import SectionModel from "../models/section.model";
 import EnrollmentModel from "../models/enrollment.model";
 import AppError from "../utils/AppError";
 import mongoose from "mongoose";
@@ -94,7 +95,7 @@ class StudentCourseService {
         // Dem so luong lessons va sections
         const lessonsCount = await LessonModel.countDocuments({ course_id: courseId });
         const lessons = await LessonModel.find({ course_id: courseId }).select("_id").lean();
-        const lessonIds = lessons.map(l => l._id);
+        const lessonIds = lessons.map((l: any) => l._id);
 
         const sectionsCount = await mongoose.connection
             .collection("sections")
@@ -156,6 +157,84 @@ class StudentCourseService {
             ...this.transformCourseData(course),
             enrolled_via_roadmaps: courseToRoadmapMap[course._id.toString()] || []
         }));
+    };
+
+    // API #4: Lay lessons va sections cua course
+    getCourseLessonsWithSections = async (courseId: string, studentId?: string) => {
+        // Kiem tra course co ton tai va published
+        const course = await CourseModel.findById(courseId).lean();
+        if (!course) {
+            throw AppError.notFoundError("Khóa học không tồn tại");
+        }
+        if (!course.is_published) {
+            throw AppError.forbiddenError("Khóa học chưa được xuất bản");
+        }
+
+        // Kiem tra student co enrolled khong (neu co studentId)
+        let isEnrolled = false;
+        if (studentId) {
+            const enrollmentCount = await EnrollmentModel.countDocuments({
+                student: studentId,
+                roadmap: { $exists: true }
+            });
+            
+            if (enrollmentCount > 0) {
+                const enrollments = await EnrollmentModel.find({ 
+                    student: studentId 
+                }).populate("roadmap").lean();
+
+                for (const enrollment of enrollments) {
+                    const roadmap = enrollment.roadmap as any;
+                    if (roadmap && roadmap.courses) {
+                        const courseIds = roadmap.courses.map((id: any) => id.toString());
+                        if (courseIds.includes(courseId)) {
+                            isEnrolled = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Lay lessons va sections
+        const lessons: any[] = await LessonModel.find({ course_id: courseId })
+            .sort({ order: 1 })
+            .lean();
+
+        const lessonsWithSections = await Promise.all(
+            lessons.map(async (lesson) => {
+                const sections = await SectionModel.find({ lesson_id: lesson._id })
+                    .sort({ order: 1 })
+                    .lean();
+
+                // Neu chua enrolled, chi tra ve section free (is_published = true trong lesson)
+                const filteredSections = isEnrolled 
+                    ? sections 
+                    : lesson.is_published 
+                        ? sections 
+                        : sections.map(s => ({
+                            ...s,
+                            video_url: null,
+                            mindmap_url: null,
+                            test_id: null,
+                            is_locked: true
+                        }));
+
+                return {
+                    ...lesson,
+                    is_free: lesson.is_published,
+                    is_locked: !isEnrolled && !lesson.is_published,
+                    sections: filteredSections
+                };
+            })
+        );
+
+        return {
+            course_id: courseId,
+            course_title: course.title,
+            is_enrolled: isEnrolled,
+            lessons: lessonsWithSections
+        };
     };
 }
 

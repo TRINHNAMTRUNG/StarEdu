@@ -23,6 +23,15 @@ class PronunciationController {
                 return res.status(400).json({ success: false, message: "Thiếu referenceText" });
             }
 
+            // Validate file size - Azure Speech limit: ~10MB
+            const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+            if (file.size > MAX_FILE_SIZE) {
+                return res.status(400).json({
+                    success: false,
+                    message: "File audio không được vượt quá 10MB"
+                });
+            }
+
             const azureService = new AzurePronunciationService();
             const result = await azureService.assess(file.buffer, referenceText);
 
@@ -50,6 +59,15 @@ class PronunciationController {
                 return res.status(400).json({ 
                     success: false, 
                     message: "Thiếu file audio" 
+                });
+            }
+
+            // Validate file size - OpenAI Whisper limit: 25MB
+            const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
+            if (file.size > MAX_FILE_SIZE) {
+                return res.status(400).json({
+                    success: false,
+                    message: "File audio không được vượt quá 25MB"
                 });
             }
 

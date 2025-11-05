@@ -33,6 +33,13 @@ adminLessonRoutes.get(
     lessonController.getLessonById
 );
 
+// API #3.1: GET /admin/lessons/:id/sections
+adminLessonRoutes.get(
+    "/:id/sections",
+    validationParams(LessonIdParamDto),
+    lessonController.getLessonSections
+);
+
 // API #4: PATCH /admin/lessons/:id
 adminLessonRoutes.patch(
     "/:id",

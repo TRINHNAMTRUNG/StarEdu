@@ -59,6 +59,16 @@ class LessonController {
         );
     });
 
+    // API #3.1: GET /admin/lessons/:id/sections
+    getLessonSections = asyncHandler(async (req: Request, res: Response) => {
+        const { id } = req.params;
+        const sections = await this.lessonService.getLessonSections(id);
+
+        return res.status(200).json(
+            ResponseFormat.successResponse(sections, "Lấy danh sách sections thành công", 200, req.requestId)
+        );
+    });
+
     // API #4: PATCH /admin/lessons/:id
     updateLesson = asyncHandler(async (req: Request, res: Response) => {
         const { id } = req.params;

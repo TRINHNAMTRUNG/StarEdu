@@ -12,7 +12,12 @@ const studentVocabularyController = container.resolve(StudentVocabularyControlle
 const pronunciationController = container.resolve(PronunciationController);
 
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: 25 * 1024 * 1024, // 25MB limit for pronunciation routes
+  }
+});
 
 // GET /student/vocabulary/sets - Lấy tất cả bộ từ vựng (không cần course_id)
 studentVocabularyRoutes.get(

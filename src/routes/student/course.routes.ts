@@ -27,4 +27,11 @@ studentCourseRoutes.get(
     studentCourseController.getEnrolledCourses
 );
 
+// API #4: GET /student/courses/:id/lessons (public with optional auth)
+studentCourseRoutes.get(
+    "/:id/lessons",
+    validationParams(CourseIdParamDto),
+    studentCourseController.getCourseLessons
+);
+
 export default studentCourseRoutes;

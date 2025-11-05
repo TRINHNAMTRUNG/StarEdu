@@ -30,6 +30,11 @@ const CourseSchema = new Schema({
     total_enrollments: { type: Number, default: 0 },
     average_rating: { type: Number, default: 0 },
     total_reviews: { type: Number, default: 0 },
+    
+    // Pricing fields
+    price: { type: Number, default: 0 },
+    original_price: { type: Number, default: 0 },
+    is_free: { type: Boolean, default: true },
 }, { timestamps: true, collection: "courses" });
 
 export type ICourse = InferSchemaType<typeof CourseSchema>;

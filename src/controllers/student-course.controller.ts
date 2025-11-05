@@ -63,6 +63,18 @@ class StudentCourseController {
             ResponseFormat.successResponse(response, "Lấy danh sách khóa học đã đăng ký thành công", 200, req.requestId)
         );
     });
+
+    // API #4: GET /student/courses/:id/lessons
+    getCourseLessons = asyncHandler(async (req: Request, res: Response) => {
+        const { id } = req.params;
+        const studentId = req.user?.id; // Optional - neu co thi check enrollment
+
+        const result = await this.studentCourseService.getCourseLessonsWithSections(id, studentId);
+
+        return res.status(200).json(
+            ResponseFormat.successResponse(result, "Lấy danh sách bài học thành công", 200, req.requestId)
+        );
+    });
 }
 
 export default StudentCourseController;

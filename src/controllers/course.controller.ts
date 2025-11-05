@@ -69,6 +69,16 @@ class CourseController {
         );
     });
 
+    // API #3.1: GET /admin/courses/:id/lessons
+    getCourseLessons = asyncHandler(async (req: Request, res: Response) => {
+        const { id } = req.params;
+        const lessons = await this.courseService.getCourseLessons(id);
+
+        return res.status(200).json(
+            ResponseFormat.successResponse(lessons, "Lấy danh sách bài học thành công", 200, req.requestId)
+        );
+    });
+
     // API #4: PATCH /admin/courses/:id
     updateCourse = asyncHandler(async (req: Request, res: Response) => {
         const { id } = req.params;

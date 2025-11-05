@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "import:ets": "ts-node src/scripts/importETSData.ts",
+    "import:roadmap": "ts-node src/scripts/importRoadmapData.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon --files src/index.ts",
     "build": "tsc",

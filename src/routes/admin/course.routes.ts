@@ -35,6 +35,13 @@ adminCourseRoutes.get(
     courseController.getCourseById
 );
 
+// API #3.1: GET /admin/courses/:id/lessons
+adminCourseRoutes.get(
+    "/:id/lessons",
+    validationParams(CourseIdParamDto),
+    courseController.getCourseLessons
+);
+
 // API #4: PATCH /admin/courses/:id
 adminCourseRoutes.patch(
     "/:id",

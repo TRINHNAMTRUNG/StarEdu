@@ -14,7 +14,7 @@ import mongoose from "mongoose";
 
 @injectable()
 class CourseService {
-    private async populateAndTransformCourse(courseId: string) {
+    private async populateAndTransformCourse(courseId: string, includeLessons: boolean = false) {
         const course = await CourseModel.findById(courseId)
             .populate({
                 path: "assigned_teachers",
@@ -28,7 +28,45 @@ class CourseService {
 
         if (!course) return null;
 
-        return this.transformCourseData(course);
+        let courseData = this.transformCourseData(course);
+
+        // Populate lessons if requested
+        if (includeLessons) {
+            const lessons = await mongoose.connection
+                .collection("lessons")
+                .find({ course_id: new mongoose.Types.ObjectId(courseId) })
+                .sort({ order: 1 })
+                .toArray();
+
+            // For each lesson, get its sections
+            const lessonsWithSections = await Promise.all(
+                lessons.map(async (lesson) => {
+                    const sections = await mongoose.connection
+                        .collection("sections")
+                        .find({ lesson_id: lesson._id })
+                        .sort({ order: 1 })
+                        .toArray();
+
+                    return {
+                        ...lesson,
+                        _id: lesson._id.toString(),
+                        course_id: lesson.course_id.toString(),
+                        sections: sections.map(s => ({
+                            ...s,
+                            _id: s._id.toString(),
+                            lesson_id: s.lesson_id.toString()
+                        }))
+                    };
+                })
+            );
+
+            courseData = {
+                ...courseData,
+                lessons: lessonsWithSections
+            };
+        }
+
+        return courseData;
     }
 
     private transformCourseData(course: any) {
@@ -96,12 +134,45 @@ class CourseService {
 
     // API #3: Lay chi tiet course
     getCourseById = async (id: string) => {
-        const course = await this.populateAndTransformCourse(id);
+        const course = await this.populateAndTransformCourse(id, true); // Include lessons and sections
         if (!course) {
             throw AppError.notFoundError("Khóa học không tồn tại");
         }
 
         return course;
+    };
+
+    // API #3.1: Lay danh sach lessons cua course
+    getCourseLessons = async (courseId: string) => {
+        const lessons = await mongoose.connection
+            .collection("lessons")
+            .find({ course_id: new mongoose.Types.ObjectId(courseId) })
+            .sort({ order: 1 })
+            .toArray();
+
+        // For each lesson, get its sections
+        const lessonsWithSections = await Promise.all(
+            lessons.map(async (lesson) => {
+                const sections = await mongoose.connection
+                    .collection("sections")
+                    .find({ lesson_id: lesson._id })
+                    .sort({ order: 1 })
+                    .toArray();
+
+                return {
+                    ...lesson,
+                    _id: lesson._id.toString(),
+                    course_id: lesson.course_id.toString(),
+                    sections: sections.map(s => ({
+                        ...s,
+                        _id: s._id.toString(),
+                        lesson_id: s.lesson_id.toString()
+                    }))
+                };
+            })
+        );
+
+        return lessonsWithSections;
     };
 
     // API #4: Cap nhat course
