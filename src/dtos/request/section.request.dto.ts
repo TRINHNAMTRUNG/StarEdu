@@ -56,8 +56,25 @@ export class UpdateSectionReqDto {
     description?: string;
 
     @IsOptional()
-    @IsMongoId()
-    test_id?: string;
+    @IsString()
+    article_content?: string;
+
+    @IsOptional()
+    @IsNumber()
+    @Min(0)
+    duration_minutes?: number;
+
+    @IsOptional()
+    questions?: any[];
+
+    @IsOptional()
+    @IsString()
+    audioUrl?: string;
+
+    @IsOptional()
+    @IsNumber()
+    @Min(0)
+    passingScore?: number;
 }
 
 export class SectionIdParamDto {

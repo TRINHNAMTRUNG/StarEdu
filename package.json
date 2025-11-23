@@ -5,6 +5,7 @@
   "scripts": {
     "import:ets": "ts-node src/scripts/importETSData.ts",
     "import:roadmap": "ts-node src/scripts/importRoadmapData.ts",
+    "import:roadmap-multi": "ts-node src/scripts/importRoadmapWithMultipleCourses.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon --files src/index.ts",
     "build": "tsc",
