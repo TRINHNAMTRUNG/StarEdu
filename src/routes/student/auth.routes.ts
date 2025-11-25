@@ -1,0 +1,48 @@
+import { NextFunction, Request, Response, Router } from "express";
+import { container } from "tsyringe";
+import { AuthController } from "../../controllers/auth.controller";
+import multer from "multer";
+import { validationBody, log } from "../../middlewares/validationError.middleware";
+import { StudentRegisterReqDto, VerifyOtpReqDto, LoginReqDto, LogoutReqDto, RefreshTokenReqDto } from "../../dtos/request/Auth.request.dto";
+
+const studentAuthRoutes = Router();
+const authController = container.resolve(AuthController);
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
+studentAuthRoutes.post(
+    "/register",
+    validationBody(StudentRegisterReqDto),
+    authController.registerStudentByPhone
+);
+
+studentAuthRoutes.post(
+    "/verify-account",
+    validationBody(VerifyOtpReqDto),
+    authController.verifyStudentOtp
+);
+
+studentAuthRoutes.post(
+    "/login",
+    validationBody(LoginReqDto),
+    authController.studentLogin  // ✅ Đổi sang studentLogin
+);
+studentAuthRoutes.post(
+    "/logout",
+    validationBody(LogoutReqDto),
+    authController.logout
+);
+studentAuthRoutes.post(
+    "/logout-all-devices",
+    validationBody(LogoutReqDto),
+    authController.logoutAllDevices
+);
+
+studentAuthRoutes.post(
+    "/refresh-token",
+    validationBody(RefreshTokenReqDto),
+    authController.refreshToken
+);
+
+export default studentAuthRoutes;
