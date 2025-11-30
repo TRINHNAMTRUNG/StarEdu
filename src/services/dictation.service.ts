@@ -108,14 +108,7 @@ class DictationService {
             .select('-__v')
             .lean();
 
-        if (!lesson) {
-            return null;
-        }
-
-        return {
-            ...lesson,
-            _id: lesson._id.toString()
-        } as IDictation;
+        return lesson;
     }
 
     /**

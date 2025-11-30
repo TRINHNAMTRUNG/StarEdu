@@ -16,24 +16,24 @@ const sectionController = container.resolve(SectionController);
 // --- CHANGED: Multer config: use diskStorage, optional size limit via env ---
 const uploadTmpDir = path.join(os.tmpdir(), "staredu-uploads");
 if (!fs.existsSync(uploadTmpDir)) {
-	// create tmp dir for uploads
-	fs.mkdirSync(uploadTmpDir, { recursive: true });
+    // create tmp dir for uploads
+    fs.mkdirSync(uploadTmpDir, { recursive: true });
 }
 
 const storage = multer.diskStorage({
-	destination: function (_req, _file, cb) {
-		cb(null, uploadTmpDir);
-	},
-	filename: function (_req, file, cb) {
-		cb(null, `${Date.now()}-${file.originalname}`);
-	}
+    destination: function (_req, _file, cb) {
+        cb(null, uploadTmpDir);
+    },
+    filename: function (_req, file, cb) {
+        cb(null, `${Date.now()}-${file.originalname}`);
+    }
 });
 
 // Read optional max file size from env (MB). If not set => no limit enforced by multer.
 const maxSizeMb = process.env.UPLOAD_MAX_FILE_SIZE_MB ? Number(process.env.UPLOAD_MAX_FILE_SIZE_MB) : undefined;
 const multerOptions: multer.Options = { storage };
 if (typeof maxSizeMb === "number" && !Number.isNaN(maxSizeMb) && maxSizeMb > 0) {
-	multerOptions.limits = { fileSize: maxSizeMb * 1024 * 1024 };
+    multerOptions.limits = { fileSize: maxSizeMb * 1024 * 1024 };
 }
 
 const upload = multer(multerOptions);

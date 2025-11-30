@@ -37,6 +37,15 @@ export class StudentCourseListItemResDto {
     @Expose()
     @Type(() => StudentCourseTeacherResDto)
     assigned_teachers!: StudentCourseTeacherResDto[];
+
+    @Expose()
+    price!: number;
+
+    @Expose()
+    original_price!: number;
+
+    @Expose()
+    is_free!: boolean;
 }
 
 export class GetStudentCourseListResDto {
@@ -89,6 +98,15 @@ export class GetStudentCourseDetailResDto {
     @Expose()
     @Type(() => StudentCourseTeacherResDto)
     assigned_teachers!: StudentCourseTeacherResDto[];
+
+    @Expose()
+    price!: number;
+
+    @Expose()
+    original_price!: number;
+
+    @Expose()
+    is_free!: boolean;
 }
 
 // GET /student/courses/enrolled

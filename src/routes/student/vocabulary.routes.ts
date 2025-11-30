@@ -12,9 +12,14 @@ const studentVocabularyController = container.resolve(StudentVocabularyControlle
 const pronunciationController = container.resolve(PronunciationController);
 
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+const upload = multer({
+    storage: storage,
+    limits: {
+        fileSize: 25 * 1024 * 1024, // 25MB limit for pronunciation routes
+    }
+});
 
-// PUBLIC ROUTES (Khong can auth)
+// GET /student/vocabulary/sets - Lấy tất cả bộ từ vựng (không cần course_id)
 studentVocabularyRoutes.get(
     "/sets",
     optionalAuth,  // ✅ Thêm middleware này
@@ -35,6 +40,23 @@ studentVocabularyRoutes.post(
     authorizeRoles(UserRole.STUDENT),
     upload.single("audio"),
     pronunciationController.assessPronunciation
+);
+
+// POST /student/vocabulary/pronunciation-toeic - Đánh giá phát âm TOEIC bằng OpenAI
+studentVocabularyRoutes.post(
+    "/pronunciation-toeic",
+    authenticateToken,
+    authorizeRoles(UserRole.STUDENT),
+    upload.single("audio"),
+    pronunciationController.evaluateToeicSpeech
+);
+
+// POST /student/vocabulary/evaluate-writing - Đánh giá TOEIC Writing bằng GPT-4o-mini
+studentVocabularyRoutes.post(
+    "/evaluate-writing",
+    authenticateToken,
+    authorizeRoles(UserRole.STUDENT),
+    pronunciationController.evaluateWriting
 );
 
 export default studentVocabularyRoutes;

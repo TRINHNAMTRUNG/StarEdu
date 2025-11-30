@@ -36,7 +36,7 @@ class CourseController {
         );
     });
 
-    // GET /admin/courses
+    // API #2: GET /admin/courses
     getCourseList = asyncHandler(async (req: Request, res: Response) => {
         const { page = 1, limit = 10, ...filters } = req.query;
         const result = await this.courseService.getCourseList(Number(page), Number(limit), filters);
@@ -50,7 +50,7 @@ class CourseController {
         );
     });
 
-    // GET /admin/courses/:id
+    // API #3: GET /admin/courses/:id
     getCourseById = asyncHandler(async (req: Request, res: Response) => {
         const { id } = req.params;
         const result = await this.courseService.getCourseById(id);
@@ -64,7 +64,17 @@ class CourseController {
         );
     });
 
-    // PATCH /admin/courses/:id
+    // API #3.1: GET /admin/courses/:id/lessons
+    getCourseLessons = asyncHandler(async (req: Request, res: Response) => {
+        const { id } = req.params;
+        const lessons = await this.courseService.getCourseLessons(id);
+
+        return res.status(200).json(
+            ResponseFormat.successResponse(lessons, "Lấy danh sách bài học thành công", 200, req.requestId)
+        );
+    });
+
+    // API #4: PATCH /admin/courses/:id
     updateCourse = asyncHandler(async (req: Request, res: Response) => {
         const { id } = req.params;
         const dto: UpdateCourseReqDto = req.body;
@@ -82,7 +92,7 @@ class CourseController {
         );
     });
 
-    // DELETE /admin/courses/:id (soft delete)
+    // API #5: DELETE /admin/courses/:id
     deleteCourse = asyncHandler(async (req: Request, res: Response) => {
         const { id } = req.params;
         const result = await this.courseService.deleteCourse(id);
@@ -96,7 +106,7 @@ class CourseController {
         );
     });
 
-    // PATCH /admin/courses/:id/publish
+    // API #6: PATCH /admin/courses/:id/publish
     togglePublishCourse = asyncHandler(async (req: Request, res: Response) => {
         const { id } = req.params;
         const result = await this.courseService.togglePublishCourse(id);
@@ -110,7 +120,7 @@ class CourseController {
         );
     });
 
-    // PATCH /admin/courses/:id/teachers
+    // API #7: PATCH /admin/courses/:id/teachers
     assignTeachers = asyncHandler(async (req: Request, res: Response) => {
         const { id } = req.params;
         const dto: AssignTeachersReqDto = req.body;
@@ -125,7 +135,7 @@ class CourseController {
         );
     });
 
-    // GET /admin/courses/:id/statistics
+    // API #8: GET /admin/courses/:id/statistics
     getCourseStatistics = asyncHandler(async (req: Request, res: Response) => {
         const { id } = req.params;
         const result = await this.courseService.getCourseStatistics(id);
@@ -260,6 +270,7 @@ class CourseController {
             ResponseFormat.successResponse(response, "Lấy courses khả dụng cho roadmap thành công", 200, req.requestId)
         );
     });
+
 }
 
 export default CourseController;

@@ -4,15 +4,15 @@ const PaymentSchema = new Schema({
     student: { type: Schema.Types.ObjectId, ref: "Student", required: true },
     roadmap: { type: Schema.Types.ObjectId, ref: "Roadmap", required: true },
     amount: { type: Number, required: true },
-    gateway: { 
-        type: String, 
+    gateway: {
+        type: String,
         enum: ["momo", "vnpay", "zalopay"], // ✅ Literal values
-        required: true 
+        required: true
     },
-    status: { 
-        type: String, 
+    status: {
+        type: String,
         enum: ["pending", "success", "failed", "cancelled"], // ✅ Literal values
-        default: "pending" 
+        default: "pending"
     },
     order_id: { type: String, required: true, unique: true },
     transaction_id: { type: String },

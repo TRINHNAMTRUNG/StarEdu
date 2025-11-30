@@ -4,7 +4,6 @@ import { ENV } from '../config/environment';
 import { injectable } from 'tsyringe';
 import GeminiService from './gemini.service';
 import AppError from '../utils/AppError';
-import { fetchTranscript } from 'youtube-transcript-plus';
 
 export interface IRawBreak {
     start: number;
@@ -30,11 +29,31 @@ class YouTubeService {
                 );
             }
 
-            // ✅ Dùng youtube-transcript-plus với custom user agent
-            const transcript = await fetchTranscript(youtubeVideoId, {
-                lang: 'en',
-                userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-            });
+            // ✅ Dynamic import cho ES Module với eval để bypass CommonJS
+            const { fetchTranscript } = await eval(`import('youtube-transcript-plus')`);
+
+            // Try multiple English variants
+            let transcript;
+            const englishVariants = ['en', 'en-US', 'en-GB', 'en-AU', 'en-CA'];
+
+            for (const lang of englishVariants) {
+                try {
+                    transcript = await fetchTranscript(youtubeVideoId, {
+                        lang,
+                        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+                    });
+                    if (transcript && transcript.length > 0) {
+                        console.log(`✅ Found transcript in language: ${lang}`);
+                        break;
+                    }
+                } catch (err: any) {
+                    // Continue to next language variant
+                    if (lang === englishVariants[englishVariants.length - 1]) {
+                        // Last attempt failed
+                        throw err;
+                    }
+                }
+            }
 
             if (!transcript || transcript.length === 0) {
                 throw AppError.badRequestError(

@@ -25,6 +25,8 @@ export class StudentRegisterResDto extends PickType(UserBaseResDto, [
 
 // /student/verify-account
 export class StudentVerifyResDto extends PickType(UserBaseResDto, [
+    '_id',
+    'role',
     'avatar',
     'phone',
     'name',
@@ -39,6 +41,8 @@ export class StudentVerifyResDto extends PickType(UserBaseResDto, [
 
 // /student/login
 export class StudentLoginResDto extends PickType(UserBaseResDto, [
+    '_id',
+    'role',
     'avatar',
     'phone',
     'name',

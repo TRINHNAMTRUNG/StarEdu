@@ -10,15 +10,17 @@ import s3Util, { S3Folder } from "../utils/s3.util";
 import {
     CreateCourseReqDto,
     UpdateCourseReqDto,
-    AssignTeachersReqDto
+    AssignTeachersReqDto,
+    ToggleModifiableReqDto
 } from "../dtos/request/course.request.dto";
+import mongoose from "mongoose";
 
 @injectable()
 class CourseService {
     /**
      * Helper: Populate và transform course data
      */
-    private async populateAndTransformCourse(courseId: string) {
+    private async populateAndTransformCourse(courseId: string, includeLessons: boolean = false) {
         const course = await CourseModel.findById(courseId)
             .populate({
                 path: "assigned_teachers",
@@ -32,12 +34,47 @@ class CourseService {
 
         if (!course) return null;
 
-        return this.transformCourseData(course);
+        let courseData = this.transformCourseData(course);
+
+        // Populate lessons if requested
+        if (includeLessons) {
+            const lessons = await mongoose.connection
+                .collection("lessons")
+                .find({ course_id: new mongoose.Types.ObjectId(courseId) })
+                .sort({ order: 1 })
+                .toArray();
+
+            // For each lesson, get its sections
+            const lessonsWithSections = await Promise.all(
+                lessons.map(async (lesson) => {
+                    const sections = await mongoose.connection
+                        .collection("sections")
+                        .find({ lesson_id: lesson._id })
+                        .sort({ order: 1 })
+                        .toArray();
+
+                    return {
+                        ...lesson,
+                        _id: lesson._id.toString(),
+                        course_id: lesson.course_id.toString(),
+                        sections: sections.map(s => ({
+                            ...s,
+                            _id: s._id.toString(),
+                            lesson_id: s.lesson_id.toString()
+                        }))
+                    };
+                })
+            );
+
+            courseData = {
+                ...courseData,
+                lessons: lessonsWithSections
+            };
+        }
+
+        return courseData;
     }
 
-    /**
-     * Helper: Transform course data (convert ObjectId to string)
-     */
     private transformCourseData(course: any) {
         return {
             ...course,
@@ -164,7 +201,7 @@ class CourseService {
      * API #3: GET COURSE BY ID
      */
     getCourseById = async (id: string) => {
-        const course = await this.populateAndTransformCourse(id);
+        const course = await this.populateAndTransformCourse(id, true); // Include lessons and sections
         if (!course) {
             throw AppError.notFoundError("Khóa học không tồn tại");
         }
@@ -701,6 +738,7 @@ class CourseService {
 
         course.is_deleted = false;
         course.deleted_at = undefined;
+
         await course.save();
 
         return {
@@ -942,6 +980,26 @@ class CourseService {
             target_roadmap_id: targetRoadmapId,
             courses: coursesWithRoadmaps
         };
+    }
+
+    // Add: trả về danh sách lessons cho một course
+    async getCourseLessons(courseId: string) {
+        // Kiểm tra course tồn tại
+        const course = await CourseModel.findById(courseId).lean();
+        if (!course) throw AppError.notFoundError("Course không tồn tại");
+
+        const lessons = await LessonModel.find({ course_id: courseId })
+            .select("_id title order is_published is_free")
+            .sort({ order: 1 })
+            .lean();
+
+        return lessons.map(l => ({
+            _id: l._id.toString(),
+            title: l.title,
+            order: l.order,
+            is_published: !!l.is_published,
+            is_free: !!l.is_free
+        }));
     }
 }
 

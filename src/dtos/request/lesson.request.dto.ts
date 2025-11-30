@@ -20,6 +20,10 @@ export class CreateLessonReqDto {
     @Min(1)
     order!: number;
 
+    @IsNotEmpty()
+    @IsMongoId()
+    created_by!: string;
+
     @IsOptional()
     @IsNumber()
     @Min(0)

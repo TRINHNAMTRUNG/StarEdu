@@ -19,12 +19,19 @@ studentCourseRoutes.get(
     studentCourseController.getCourseById
 );
 
-// API #3: GET /student/courses/enrolled (private - CẦN auth)
+// API #3: GET /student/courses/enrolled (private - CAN auth)
 studentCourseRoutes.get(
     "/enrolled",
     authenticateToken,
     authorizeRoles(UserRole.STUDENT),
     studentCourseController.getEnrolledCourses
+);
+
+// API #4: GET /student/courses/:id/lessons (public with optional auth)
+studentCourseRoutes.get(
+    "/:id/lessons",
+    validationParams(CourseIdParamDto),
+    studentCourseController.getCourseLessons
 );
 
 export default studentCourseRoutes;

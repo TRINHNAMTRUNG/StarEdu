@@ -67,14 +67,7 @@ export async function getAzureTTS(word: string, voiceCode: "en-GB" | "en-US"): P
         const voice = voiceCode === "en-GB" ? "en-GB-LibbyNeural" : "en-US-JennyNeural";
         const ttsUrl = `https://${AZURE_SPEECH_REGION}.tts.speech.microsoft.com/cognitiveservices/v1`;
 
-        // 3️ TẠO SSML NỘI DUNG ĐỌC
-        // LƯU Ý: mã hiện tại tạo SSML từ chuỗi văn bản 'word' (tức TTS sẽ đọc văn bản đó).
-        // Hiện tại chúng ta KHÔNG nhúng phiên âm IPA do LLM sinh vào SSML tự động.
-        // Nếu muốn ép TTS phát âm theo IPA, cần:
-        //  - nhận chuỗi IPA từ LLM,
-        //  - validate & escape XML cho chuỗi IPA,
-        //  - nhúng IPA vào SSML qua thẻ <phoneme alphabet="ipa" ph="..."> (ví dụ: <phoneme alphabet="ipa" ph="tɜːn ɒf">turn off</phoneme>),
-        //  - đồng thời cần kiểm thử với voice đã chọn vì hỗ trợ phoneme có thể khác nhau.
+        // 3️ Tạo SSML nội dung đọc
         const ssml = `
       <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="${voiceCode}">
         <voice name="${voice}">${word}</voice>

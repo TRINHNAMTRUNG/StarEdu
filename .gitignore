@@ -53,6 +53,3 @@ data/
 *.pid
 *.pid.lock
 .cache
-
-# Env example (ignore example env files so secrets are not tracked)
-.env.example

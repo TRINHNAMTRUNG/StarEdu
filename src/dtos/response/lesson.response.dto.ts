@@ -107,7 +107,7 @@ export class GetLessonDetailResDto extends CreateLessonResDto {
 }
 
 // PATCH /admin/lessons/:id
-export class UpdateLessonResDto extends CreateLessonResDto {}
+export class UpdateLessonResDto extends CreateLessonResDto { }
 
 // DELETE /admin/lessons/:id
 export class DeleteLessonResDto {

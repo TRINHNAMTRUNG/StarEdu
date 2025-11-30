@@ -18,15 +18,15 @@ const EnrollmentSchema = new Schema({
     roadmap: { type: Schema.Types.ObjectId, ref: "Roadmap", required: true },
     payment_id: { type: Schema.Types.ObjectId, ref: "Payment", required: true }, // ✅ Required
     enrolled_date: { type: Date, required: true }, // ✅ enrolled_date (không phải enrollment_date)
-    enrolled_by: { 
-        type: String, 
-        enum: Object.values(EnrolledBy), 
-        required: true 
+    enrolled_by: {
+        type: String,
+        enum: Object.values(EnrolledBy),
+        required: true
     },
-    status: { 
-        type: String, 
-        enum: Object.values(EnrollmentStatus), 
-        default: EnrollmentStatus.ACTIVE 
+    status: {
+        type: String,
+        enum: Object.values(EnrollmentStatus),
+        default: EnrollmentStatus.ACTIVE
     },
     expire_date: { type: Date }, // Optional
     enrolled_price: { type: Number }, // Optional (có thể free)

@@ -21,6 +21,12 @@ const roadmapController = container.resolve(RoadmapController);
 
 adminRoadmapRoutes.use(authenticateToken, authorizeRoles(UserRole.ADMIN));
 
+// Multer config (nếu cần upload thumbnail trực tiếp trong routes này)
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+});
+
 // ============================================
 // CRUD CƠ BẢN VỀ ROADMAP
 // ============================================
@@ -28,7 +34,12 @@ adminRoadmapRoutes.use(authenticateToken, authorizeRoles(UserRole.ADMIN));
 // 1. POST /admin/roadmaps
 // Mục đích: Tạo roadmap mới (Admin).
 // Ghi chú: Không trùng với API của Course. Giữ lại.
-adminRoadmapRoutes.post("/", validationBody(CreateRoadmapReqDto), roadmapController.createRoadmap);
+adminRoadmapRoutes.post(
+    "/",
+    upload.single("thumbnail"),
+    validationBody(CreateRoadmapReqDto),
+    roadmapController.createRoadmap
+);
 
 // 2. GET /admin/roadmaps
 // Mục đích: Lấy danh sách roadmap (phân trang, lọc).
@@ -42,7 +53,13 @@ adminRoadmapRoutes.get("/:id", validationParams(RoadmapIdParamDto), roadmapContr
 
 // 4. PATCH /admin/roadmaps/:id
 // Mục đích: Cập nhật metadata roadmap (thumbnail, giá, thời lượng...).
-adminRoadmapRoutes.patch("/:id", validationParams(RoadmapIdParamDto), validationBody(UpdateRoadmapReqDto), roadmapController.updateRoadmap);
+adminRoadmapRoutes.patch(
+    "/:id",
+    validationParams(RoadmapIdParamDto),
+    upload.single("thumbnail"),
+    validationBody(UpdateRoadmapReqDto),
+    roadmapController.updateRoadmap
+);
 
 // 5. DELETE /admin/roadmaps/:id
 // Mục đích: Xóa roadmap (kiểm tra enrollments, dọn thumbnail).
@@ -111,11 +128,5 @@ adminRoadmapRoutes.patch(
     validationBody(ToggleFreeRoadmapReqDto),
     roadmapController.toggleFreeRoadmap
 );
-
-// Multer config (nếu cần upload thumbnail trực tiếp trong routes này)
-const upload = multer({
-    storage: multer.memoryStorage(),
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB
-});
 
 export default adminRoadmapRoutes;

@@ -14,18 +14,23 @@ import AppError from "../utils/AppError";
 class StudentVocabularyController {
     constructor(private readonly studentVocabularyService: StudentVocabularyService) { }
 
-    // GET /student/vocabulary/sets?part_of_speech=noun
+    // GET /student/vocabulary/sets - Lấy tất cả bộ từ vựng
     getVocabularySets = asyncHandler(async (req: Request, res: Response) => {
         const studentId = req.user?.id;
         const { part_of_speech } = req.query;
+
+        if (!studentId) {
+            throw AppError.unauthorizedError("Vui lòng đăng nhập");
+        }
 
         if (!part_of_speech) {
             throw AppError.badRequestError("part_of_speech là bắt buộc");
         }
 
-        const result = await this.studentVocabularyService.getVocabularySets(
-            part_of_speech as string,
-            studentId
+        // Truyền part_of_speech vào service để lọc
+        const result = await this.studentVocabularyService.getAllVocabularySets(
+            studentId,
+            part_of_speech as string
         );
 
         const response = instanceToPlain(

@@ -33,13 +33,47 @@ export class CreateSectionResDto {
     updatedAt!: Date;
 }
 
-// GET /admin/sections/:id
-export class GetSectionDetailResDto extends CreateSectionResDto {}
+export class SectionListItemResDto {
+    @Expose()
+    _id!: string;
 
-// PATCH /admin/sections/:id
-export class UpdateSectionResDto extends CreateSectionResDto {}
+    @Expose()
+    lesson_id!: string;
 
-// DELETE /admin/sections/:id
+    @Expose()
+    title!: string;
+
+    @Expose()
+    order!: number;
+
+    @Expose()
+    video_url?: string;
+
+    @Expose()
+    mindmap_url?: string;
+
+    @Expose()
+    test_id?: string;
+}
+
+export class GetSectionListResDto {
+    @Expose()
+    total!: number;
+
+    @Expose()
+    page!: number;
+
+    @Expose()
+    limit!: number;
+
+    @Expose()
+    data!: SectionListItemResDto[];
+}
+
+export class GetSectionDetailResDto extends CreateSectionResDto { }
+
+export class UpdateSectionResDto extends CreateSectionResDto { }
+
 export class DeleteSectionResDto {
     @Expose()
     message!: string;

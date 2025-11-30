@@ -151,6 +151,9 @@ export class RoadmapCourseResDto {
 
     @Expose()
     thumbnail?: string;
+
+    @Expose()
+    skill_groups!: string[];
 }
 
 // Base roadmap response
@@ -168,16 +171,16 @@ export class RoadmapBaseResDto {
     thumbnail?: string;
 
     @Expose()
-    target_level!: string;
+    skill_groups!: string[];
 
     @Expose()
-    duration_weeks!: number;
+    target_score!: number;
 
     @Expose()
     price!: number;
 
     @Expose()
-    discount_price?: number;
+    discount_percentage!: number;
 
     @Expose()
     is_published!: boolean;
@@ -191,10 +194,10 @@ export class RoadmapBaseResDto {
 }
 
 // POST /admin/roadmaps
-export class CreateRoadmapResDto extends RoadmapBaseResDto {}
+export class CreateRoadmapResDto extends RoadmapBaseResDto { }
 
 // PATCH /admin/roadmaps/:id
-export class UpdateRoadmapResDto extends RoadmapBaseResDto {}
+export class UpdateRoadmapResDto extends RoadmapBaseResDto { }
 
 // GET /admin/roadmaps (list item)
 export class RoadmapListItemResDto {
@@ -205,16 +208,16 @@ export class RoadmapListItemResDto {
     title!: string;
 
     @Expose()
-    target_level!: string;
+    skill_groups!: string[];
 
     @Expose()
-    duration_weeks!: number;
+    target_score!: number;
 
     @Expose()
     price!: number;
 
     @Expose()
-    discount_price?: number;
+    discount_percentage!: number;
 
     @Expose()
     is_published!: boolean;
@@ -278,10 +281,10 @@ export class PublishRoadmapResDto {
 }
 
 // POST /admin/roadmaps/:id/courses
-export class AddCoursesResDto extends RoadmapBaseResDto {}
+export class AddCoursesResDto extends RoadmapBaseResDto { }
 
 // DELETE /admin/roadmaps/:id/courses/:courseId
-export class RemoveCourseResDto extends RoadmapBaseResDto {}
+export class RemoveCourseResDto extends RoadmapBaseResDto { }
 
 // POST /admin/roadmaps/:id/smart-publish
 export class SmartPublishCourseItemResDto {

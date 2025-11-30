@@ -575,6 +575,25 @@ class LessonService {
             course_free: course.is_free
         };
     }
+
+    // Add: trả về danh sách sections cho một lesson (dùng bởi LessonController.getLessonSections)
+    async getLessonSections(lessonId: string) {
+        // kiểm tra lesson tồn tại (LessonModel import/định nghĩa có thể đã có trong file)
+        const lesson = await LessonModel.findById(lessonId).lean();
+        if (!lesson) throw AppError.notFoundError("Lesson không tồn tại");
+
+        const sections = await SectionModel.find({ lesson_id: lessonId })
+            .select("_id title order description")
+            .sort({ order: 1 })
+            .lean();
+
+        return sections.map(s => ({
+            _id: s._id.toString(),
+            title: s.title,
+            order: s.order,
+            description: s.description || ""
+        }));
+    }
 }
 
 export default LessonService;

@@ -576,6 +576,58 @@ class RoadmapService {
             is_published: roadmap.is_published
         };
     }
+
+    // Add: GET public roadmaps list for students (pagination + basic filters)
+    async getPublicRoadmaps(page: number, limit: number, filters: any) {
+        const query: any = { is_published: true };
+
+        // Search by title or description
+        if (filters.search) {
+            const regex = new RegExp(String(filters.search), "i");
+            query.$or = [{ title: regex }, { description: regex }];
+        }
+
+        // Filter by skill group (single or array)
+        if (filters.skill_group) {
+            if (Array.isArray(filters.skill_group)) {
+                query.skill_groups = { $in: filters.skill_group };
+            } else {
+                query.skill_groups = filters.skill_group;
+            }
+        }
+
+        // Price range filters
+        if (filters.min_price !== undefined || filters.max_price !== undefined) {
+            query.price = {};
+            if (filters.min_price !== undefined) query.price.$gte = Number(filters.min_price);
+            if (filters.max_price !== undefined) query.price.$lte = Number(filters.max_price);
+        }
+
+        // Filter by is_free
+        if (filters.is_free !== undefined) {
+            query.is_free = filters.is_free === "true" || filters.is_free === true;
+        }
+
+        const [total, roadmaps] = await Promise.all([
+            RoadmapModel.countDocuments(query),
+            RoadmapModel.find(query)
+                .select("_id title description thumbnail skill_groups target_score price discount_percentage is_free total_enrollments")
+                .sort({ createdAt: -1 })
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .lean()
+        ]);
+
+        return {
+            total,
+            page,
+            limit,
+            data: roadmaps.map(r => ({
+                ...r,
+                _id: r._id.toString()
+            }))
+        };
+    }
 }
 
 export default RoadmapService;

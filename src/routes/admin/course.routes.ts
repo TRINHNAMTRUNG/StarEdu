@@ -72,6 +72,13 @@ adminCourseRoutes.get("/", courseController.getCourseList);
 // Ghi chú: Đặt sau các route cụ thể như /available-for-roadmap để tránh collision.
 adminCourseRoutes.get("/:id", validationParams(CourseIdParamDto), courseController.getCourseById);
 
+// API #3.1: GET /admin/courses/:id/lessons
+adminCourseRoutes.get(
+    "/:id/lessons",
+    validationParams(CourseIdParamDto),
+    courseController.getCourseLessons
+);
+
 // 7. PATCH /admin/courses/:id
 // Mục đích: Cập nhật course (thumbnail upload hỗ trợ).
 // Ghi chú: Chỉ cập nhật dữ liệu Course, không tự động thay đổi roadmap associations (trừ khi explicit).

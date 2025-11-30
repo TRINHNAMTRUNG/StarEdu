@@ -27,14 +27,15 @@ class RoadmapController {
     constructor(private readonly roadmapService: RoadmapService) { }
 
     createRoadmap = asyncHandler(async (req: Request, res: Response) => {
-        const result = await this.roadmapService.createRoadmap(req.body);
+        // Truyền file (nếu có) xuống service
+        const result = await this.roadmapService.createRoadmap(req.body, req.file as Express.Multer.File | undefined);
 
         const response = instanceToPlain(
             plainToInstance(CreateRoadmapResDto, result, { excludeExtraneousValues: true })
         );
 
         return res.status(201).json(
-            ResponseFormat.successResponse(response, "Tạo roadmap thành công", 201, req.requestId)
+            ResponseFormat.successResponse(response, "Tạo lộ trình thành công", 201, req.requestId)
         );
     });
 
@@ -47,7 +48,7 @@ class RoadmapController {
         );
 
         return res.status(200).json(
-            ResponseFormat.successResponse(response, "Lấy danh sách roadmap thành công", 200, req.requestId)
+            ResponseFormat.successResponse(response, "Lấy danh sách lộ trình thành công", 200, req.requestId)
         );
     });
 
@@ -60,20 +61,30 @@ class RoadmapController {
         );
 
         return res.status(200).json(
-            ResponseFormat.successResponse(response, "Lấy chi tiết roadmap thành công", 200, req.requestId)
+            ResponseFormat.successResponse(response, "Lấy chi tiết lộ trình thành công", 200, req.requestId)
         );
     });
 
     updateRoadmap = asyncHandler(async (req: Request, res: Response) => {
         const { id } = req.params;
-        const result = await this.roadmapService.updateRoadmap(id, req.body);
+
+        // removeThumbnail có thể được gửi từ form (string) hoặc boolean
+        const removeThumbnailRaw = (req.body && req.body.removeThumbnail) ?? (req.body && req.body.remove_thumbnail);
+        const removeThumbnail = removeThumbnailRaw === true || removeThumbnailRaw === "true";
+
+        const result = await this.roadmapService.updateRoadmap(
+            id,
+            req.body,
+            req.file as Express.Multer.File | undefined,
+            removeThumbnail
+        );
 
         const response = instanceToPlain(
             plainToInstance(UpdateRoadmapResDto, result, { excludeExtraneousValues: true })
         );
 
         return res.status(200).json(
-            ResponseFormat.successResponse(response, "Cập nhật roadmap thành công", 200, req.requestId)
+            ResponseFormat.successResponse(response, "Cập nhật lộ trình thành công", 200, req.requestId)
         );
     });
 

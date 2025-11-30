@@ -16,29 +16,27 @@ import {
     BulkToggleFreeLessonsResDto
 } from "../dtos/response/lesson.response.dto";
 import ResponseFormat from "../utils/ResponseFormat";
+import { CreateLessonReqDto, UpdateLessonReqDto } from "../dtos/request/lesson.request.dto";
 
 @injectable()
 class LessonController {
-    constructor(private readonly lessonService: LessonService) {}
+    constructor(private readonly lessonService: LessonService) { }
 
-    /**
-     * API #1: POST /admin/lessons
-     */
+    // API #1: POST /admin/lessons
     createLesson = asyncHandler(async (req: Request, res: Response) => {
-        const result = await this.lessonService.createLesson(req.body);
+        const dto: CreateLessonReqDto = req.body;
+        const result = await this.lessonService.createLesson(dto);
 
         const response = instanceToPlain(
             plainToInstance(CreateLessonResDto, result, { excludeExtraneousValues: true })
         );
 
         return res.status(201).json(
-            ResponseFormat.successResponse(response, "Tạo lesson thành công", 201, req.requestId)
+            ResponseFormat.successResponse(response, "Tạo bài học thành công", 201, req.requestId)
         );
     });
 
-    /**
-     * API #2: GET /admin/lessons
-     */
+    // API #2: GET /admin/lessons
     getLessonList = asyncHandler(async (req: Request, res: Response) => {
         const { page = 1, limit = 10, ...filters } = req.query;
         const result = await this.lessonService.getLessonList(Number(page), Number(limit), filters);
@@ -48,13 +46,11 @@ class LessonController {
         );
 
         return res.status(200).json(
-            ResponseFormat.successResponse(response, "Lấy danh sách lessons thành công", 200, req.requestId)
+            ResponseFormat.successResponse(response, "Lấy danh sách bài học thành công", 200, req.requestId)
         );
     });
 
-    /**
-     * API #3: GET /admin/lessons/:id
-     */
+    // API #3: GET /admin/lessons/:id
     getLessonById = asyncHandler(async (req: Request, res: Response) => {
         const { id } = req.params;
         const result = await this.lessonService.getLessonById(id);
@@ -64,29 +60,36 @@ class LessonController {
         );
 
         return res.status(200).json(
-            ResponseFormat.successResponse(response, "Lấy chi tiết lesson thành công", 200, req.requestId)
+            ResponseFormat.successResponse(response, "Lấy chi tiết bài học thành công", 200, req.requestId)
         );
     });
 
-    /**
-     * API #4: PATCH /admin/lessons/:id
-     */
+    // API #3.1: GET /admin/lessons/:id/sections
+    getLessonSections = asyncHandler(async (req: Request, res: Response) => {
+        const { id } = req.params;
+        const sections = await this.lessonService.getLessonSections(id);
+
+        return res.status(200).json(
+            ResponseFormat.successResponse(sections, "Lấy danh sách sections thành công", 200, req.requestId)
+        );
+    });
+
+    // API #4: PATCH /admin/lessons/:id
     updateLesson = asyncHandler(async (req: Request, res: Response) => {
         const { id } = req.params;
-        const result = await this.lessonService.updateLesson(id, req.body);
+        const dto: UpdateLessonReqDto = req.body;
+        const result = await this.lessonService.updateLesson(id, dto);
 
         const response = instanceToPlain(
             plainToInstance(UpdateLessonResDto, result, { excludeExtraneousValues: true })
         );
 
         return res.status(200).json(
-            ResponseFormat.successResponse(response, "Cập nhật lesson thành công", 200, req.requestId)
+            ResponseFormat.successResponse(response, "Cập nhật bài học thành công", 200, req.requestId)
         );
     });
 
-    /**
-     * API #5: DELETE /admin/lessons/:id
-     */
+    // API #5: DELETE /admin/lessons/:id
     deleteLesson = asyncHandler(async (req: Request, res: Response) => {
         const { id } = req.params;
         const result = await this.lessonService.deleteLesson(id);

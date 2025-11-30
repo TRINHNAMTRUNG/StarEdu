@@ -14,7 +14,7 @@ import { CreateSectionReqDto, UpdateSectionReqDto } from "../dtos/request/sectio
 
 @injectable()
 class SectionController {
-    constructor(private readonly sectionService: SectionService) {}
+    constructor(private readonly sectionService: SectionService) { }
 
     /**
      * POST /admin/sections (with file upload)

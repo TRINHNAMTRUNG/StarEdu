@@ -1,5 +1,6 @@
-import { IsArray, IsBoolean, IsEnum, IsMongoId, IsNotEmpty, IsNumber, IsOptional, IsString, Length, Min } from "class-validator";
+import { IsArray, IsBoolean, IsEnum, IsMongoId, IsNotEmpty, IsNumber, IsOptional, IsString, Length, Max, Min } from "class-validator";
 import { Level } from "../../models/student.model";
+import { SkillGroup } from "../../models/roadmap.model";
 
 // POST /admin/roadmaps
 export class CreateRoadmapReqDto {
@@ -16,14 +17,15 @@ export class CreateRoadmapReqDto {
     @IsString()
     thumbnail?: string;
 
-    @IsNotEmpty()
-    @IsEnum(Level)
-    target_level!: Level;
+    @IsOptional()
+    @IsArray()
+    @IsEnum(SkillGroup, { each: true })
+    skill_groups?: SkillGroup[];
 
     @IsNotEmpty()
     @IsNumber()
-    @Min(1)
-    duration_weeks!: number;
+    @Min(0)
+    target_score!: number;
 
     @IsNotEmpty()
     @IsNumber()
@@ -33,7 +35,8 @@ export class CreateRoadmapReqDto {
     @IsOptional()
     @IsNumber()
     @Min(0)
-    discount_price?: number;
+    @Max(100)
+    discount_percentage?: number;
 }
 
 // PATCH /admin/roadmaps/:id
@@ -48,17 +51,18 @@ export class UpdateRoadmapReqDto {
     description?: string;
 
     @IsOptional()
+    @IsArray()
+    @IsEnum(SkillGroup, { each: true })
+    skill_groups?: SkillGroup[];
+
+    @IsOptional()
     @IsString()
     thumbnail?: string;
 
     @IsOptional()
-    @IsEnum(Level)
-    target_level?: Level;
-
-    @IsOptional()
     @IsNumber()
-    @Min(1)
-    duration_weeks?: number;
+    @Min(0)
+    target_score?: number;
 
     @IsOptional()
     @IsNumber()
@@ -68,7 +72,22 @@ export class UpdateRoadmapReqDto {
     @IsOptional()
     @IsNumber()
     @Min(0)
-    discount_price?: number;
+    @Max(100)
+    discount_percentage?: number;
+}
+
+// Param validation
+export class RoadmapIdParamDto {
+    @IsMongoId()
+    id!: string;
+}
+
+export class RoadmapCourseParamDto {
+    @IsMongoId()
+    id!: string;
+
+    @IsMongoId()
+    courseId!: string;
 }
 
 // POST /admin/roadmaps/:id/courses
@@ -105,20 +124,6 @@ export class ToggleFreeRoadmapReqDto {
     @IsNotEmpty()
     @IsBoolean()
     is_free!: boolean;
-}
-
-// Param validation
-export class RoadmapIdParamDto {
-    @IsMongoId()
-    id!: string;
-}
-
-export class RoadmapCourseParamDto {
-    @IsMongoId()
-    id!: string;
-
-    @IsMongoId()
-    courseId!: string;
 }
 
 // GET /public/roadmaps/:id/structure

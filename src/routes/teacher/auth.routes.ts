@@ -1,15 +1,15 @@
-import { NextFunction, Request, Response, Router } from "express";
-import { container } from "tsyringe";
-import { AuthController } from "../../controllers/auth.controller";
-import multer from "multer";
-import { validationBody, log } from "../../middlewares/validationError.middleware";
-import { LoginReqDto, LogoutReqDto } from "../../dtos/request/Auth.request.dto";
+// import { NextFunction, Request, Response, Router } from "express";
+// import { container } from "tsyringe";
+// import { AuthController } from "../../controllers/auth.controller";
+// import multer from "multer";
+// import { validationBody, log } from "../../middlewares/validationError.middleware";
+// import { LoginReqDto, LogoutReqDto } from "../../dtos/request/Auth.request.dto";
 
-const teacherAuthRoutes = Router();
-const authController = container.resolve(AuthController);
+// const teacherAuthRoutes = Router();
+// const authController = container.resolve(AuthController);
 
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+// const storage = multer.memoryStorage();
+// const upload = multer({ storage: storage });
 
 // teacherAuthRoutes.post(
 //     "/login",
@@ -17,15 +17,15 @@ const upload = multer({ storage: storage });
 //     authController.teacherLogin
 // );
 
-teacherAuthRoutes.post(
-    "/logout",
-    validationBody(LogoutReqDto),
-    authController.logout
-);
+// teacherAuthRoutes.post(
+//     "/logout",
+//     validationBody(LogoutReqDto),
+//     authController.logout
+// );
 
-teacherAuthRoutes.post(
-    "/refresh-token",
-    authController.refreshToken
-);
+// teacherAuthRoutes.post(
+//     "/refresh-token",
+//     authController.refreshToken
+// );
 
-export default teacherAuthRoutes;
+// export default teacherAuthRoutes;

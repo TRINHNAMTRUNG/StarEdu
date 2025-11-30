@@ -5,28 +5,35 @@ import AppError from "../utils/AppError";
 
 @injectable()
 class StudentVocabularyService {
-    // So luong set toi da cho user chua mua
     private readonly FREE_SET_LIMIT = 2;
 
-    // Kiem tra student da mua bat ky khoa hoc nao chua
-    private async hasPurchasedAnyCourse(studentId?: string): Promise<boolean> {
-        if (!studentId) return false;
-        
-        const enrollment = await EnrollmentModel.findOne({ student: studentId }).lean();
+    // Helper method to check if student has purchased any course
+    private hasPurchasedAnyCourse = async (studentId: string): Promise<boolean> => {
+        const enrollment = await EnrollmentModel.findOne({
+            student: studentId,
+            status: "active"
+        }).lean();
         return !!enrollment;
-    }
+    };
 
-    // Lay danh sach sets theo part_of_speech (khong co cards)
-    getVocabularySets = async (partOfSpeech: string, studentId?: string) => {
+    // Lấy tất cả bộ từ vựng (có thể lọc theo part_of_speech)
+    getAllVocabularySets = async (studentId: string, partOfSpeech?: string) => {
+        // Check if student has purchased any course
         const hasPurchased = await this.hasPurchasedAnyCourse(studentId);
 
-        // Lay tat ca sets cua part_of_speech
-        let sets = await VocabularySetModel.find({ part_of_speech: partOfSpeech })
-            .select("_id part_of_speech day_number title description is_free cards")
-            .sort({ day_number: 1 })
+        // Tạo filter query
+        const filter: any = {};
+        if (partOfSpeech) {
+            filter.part_of_speech = partOfSpeech;
+        }
+
+        // Lấy danh sách sets với filter
+        let sets = await VocabularySetModel.find(filter)
+            .select("_id part_of_speech day_number title description cards")
+            .sort({ day_number: 1 }) // Sắp xếp theo ngày
             .lean();
 
-        // Neu chua mua -> Chi lay 2 sets dau tien (free)
+        // Neu chua mua -> Chi lay 2 sets dau tien (free) THEO TỪNG part_of_speech
         if (!hasPurchased) {
             sets = sets.slice(0, this.FREE_SET_LIMIT);
         }
@@ -51,7 +58,7 @@ class StudentVocabularyService {
         }
 
         // LOGIC MỚI: Ưu tiên check is_free TRƯỚC
-        
+
         // 1. Nếu set là FREE -> Ai cũng xem được (không cần login)
         if (set.is_free) {
             return {
@@ -84,8 +91,8 @@ class StudentVocabularyService {
 
         // Kiem tra xem set nay co trong danh sach FREE khong
         if (!hasPurchased) {
-            const freeSets = await VocabularySetModel.find({ 
-                part_of_speech: set.part_of_speech 
+            const freeSets = await VocabularySetModel.find({
+                part_of_speech: set.part_of_speech
             })
                 .sort({ day_number: 1 })
                 .limit(this.FREE_SET_LIMIT)

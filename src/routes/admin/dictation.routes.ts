@@ -2,15 +2,12 @@ import { Router } from "express";
 import { container } from "tsyringe";
 import DictationController from "../../controllers/dictation.controller";
 import { validationBody, validationParams } from "../../middlewares/validationError.middleware";
-import { authenticateToken, authorizeRoles } from "../../middlewares/auth.middleware";
-import { UserRole } from "../../models/user.model";
 import { CreateDictationReqDto, DictationIdParamDto, DeleteDictationsReqDto } from "../../dtos/request/dictation.request.dto";
 
 const adminDictationRoutes = Router();
 const dictationController = container.resolve(DictationController);
 
-// Tat ca admin routes can auth va role check
-adminDictationRoutes.use(authenticateToken, authorizeRoles(UserRole.ADMIN));
+// Middleware đã được apply ở admin/index.ts, không cần apply lại ở đây
 
 // POST /admin/dictations
 adminDictationRoutes.post(

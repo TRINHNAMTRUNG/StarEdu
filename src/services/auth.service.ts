@@ -40,7 +40,7 @@ class AuthService {
         const account = await UserModel.create({ ...userInfo, password: encryptedPassword, role: UserRole.STUDENT });
 
         // Gửi OTP xác thực đến số điện thoại
-        let phoneNumberReplace = phone.replace(/^0/, "84");
+        let phoneNumberReplace = phone.replace("0", "84");
         console.log("Sending OTP to:", phoneNumberReplace);
         // const smsPinId = await this.infobipService.sendOTP(phoneNumberReplace);
         const smsPinId = await this.infobipService.mockSendOTP(phoneNumberReplace);
@@ -93,24 +93,20 @@ class AuthService {
             throw AppError.forbiddenError("Tài khoản đã bị khóa");
         }
 
-        // ✅ THÊM: Check role match với route
-        if (expectedRole && user.role !== expectedRole) {
-            throw AppError.forbiddenError(`Tài khoản này không phải là ${expectedRole}`);
-        }
+        // Cập nhật thời gian đăng nhập cuối
+        user.last_login = new Date();
+        await user.save();
 
-        const isPasswordMatch = await user.comparePassword(password);
-        if (!isPasswordMatch) {
-            throw AppError.unauthorizedError("Mật khẩu không chính xác");
-        }
-
+        // Sinh token và lưu refresh token vào database
         const tokens = generateTokens({ id: user._id.toString(), role: user.role });
+        await RefreshTokenModel.create({
+            user: user._id,
+            token: tokens.refresh_token,
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 ngày
+        });
 
-        return {
-            ...user.toObject(),
-            password: undefined,
-            ...tokens
-        };
-    };
+        return { ...user.toObject(), ...tokens };
+    }
 
     logout = async (refreshToken: string) => {
         if (!refreshToken) {
