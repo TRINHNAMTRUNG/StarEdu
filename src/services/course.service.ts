@@ -10,8 +10,7 @@ import s3Util, { S3Folder } from "../utils/s3.util";
 import {
     CreateCourseReqDto,
     UpdateCourseReqDto,
-    AssignTeachersReqDto,
-    ToggleModifiableReqDto
+    AssignTeachersReqDto
 } from "../dtos/request/course.request.dto";
 import mongoose from "mongoose";
 
