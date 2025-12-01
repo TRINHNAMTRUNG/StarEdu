@@ -8,6 +8,7 @@ import { PaymentGateway, PaymentStatus, MoMoIPNData } from "../types/payment.typ
 import crypto from "crypto";
 import axios from "axios";
 import { ENV } from "../config/environment";
+import mongoose from "mongoose";
 
 @injectable()
 class PaymentService {
@@ -193,56 +194,78 @@ class PaymentService {
             throw AppError.notFoundError("Payment không tồn tại");
         }
 
-        if (ipnData.resultCode === 0) {
-            payment.status = "success"; // ✅ Literal string
-            payment.transaction_id = ipnData.transId;
-            payment.payment_date = new Date();
-            await payment.save();
+        // Idempotency: nếu đã success thì ignore
+        if (payment.status === "success") {
+            return { status: "success", message: "Payment already processed" };
+        }
 
-            await this.createEnrollment(payment);
+        if (ipnData.resultCode === 0) {
+            // Use transaction to ensure atomic update + enrollment creation + roadmap counter increment
+            const session = await mongoose.startSession();
+            try {
+                await session.withTransaction(async () => {
+                    payment.status = "success";
+                    payment.transaction_id = ipnData.transId;
+                    payment.payment_date = new Date();
+                    await payment.save({ session });
+
+                    // create enrollment and increment roadmap.total_enrollments within same transaction
+                    await this.createEnrollment(payment, session);
+                });
+            } finally {
+                session.endSession();
+            }
 
             return { status: "success", message: "Payment processed successfully" };
         } else {
-            payment.status = "failed"; // ✅ Literal string
+            payment.status = "failed";
             await payment.save();
-
             return { status: "failed", message: ipnData.message };
         }
     }
 
     /**
      * CREATE ENROLLMENT sau khi payment success
+     * - accept optional mongoose session for atomic operations
      */
-    private async createEnrollment(payment: any) {
-        const student = await StudentModel.findById(payment.student);
+    private async createEnrollment(payment: any, session?: mongoose.ClientSession) {
+        const student = await StudentModel.findById(payment.student).session(session ?? null);
         if (!student) {
             throw AppError.notFoundError("Student không tồn tại");
         }
 
+        // Check existing enrollment (in session if provided)
         const existingEnrollment = await EnrollmentModel.findOne({
             student: student._id,
             roadmap: payment.roadmap
-        });
+        }).session(session ?? null);
 
         if (existingEnrollment) {
             console.warn(`Enrollment already exists for payment ${payment._id}`);
             return existingEnrollment;
         }
 
-        // ✅ FIX: Tạo enrollment đúng schema model
-        const enrollment = await EnrollmentModel.create({
-            student: student._id,
-            roadmap: payment.roadmap,
-            payment_id: payment._id, // ✅ Thêm payment_id (required trong model)
-            enrolled_date: new Date(), // ✅ enrolled_date (không phải enrollment_date)
-            enrolled_by: "momo", // ✅ enrolled_by (EnrolledBy enum)
-            status: "active", // ✅ status (EnrollmentStatus enum)
-            enrolled_price: payment.amount, // ✅ Match model
-            completion_percentage: 0 // ✅ Match model
-            // last_accessed: không set (optional)
-            // expire_date: không set (optional)
-            // certificate: không set (optional)
-        });
+        // Create enrollment
+        const [enrollment] = await EnrollmentModel.create(
+            [{
+                student: student._id,
+                roadmap: payment.roadmap,
+                payment_id: payment._id,
+                enrolled_date: new Date(),
+                enrolled_by: "momo",
+                status: "active",
+                enrolled_price: payment.amount,
+                completion_percentage: 0
+            }],
+            { session }
+        );
+
+        // Increment roadmap.total_enrollments atomically within transaction
+        await RoadmapModel.findByIdAndUpdate(
+            payment.roadmap,
+            { $inc: { total_enrollments: 1 } },
+            { session }
+        );
 
         return enrollment;
     }

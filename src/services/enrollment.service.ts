@@ -57,7 +57,11 @@ class EnrollmentService {
         }
 
         const student = await StudentModel.findOne({ user: studentId });
-        if ((enrollment.student as any).toString() !== student!._id.toString()) {
+        if (!student) {
+            throw AppError.notFoundError("Student không tồn tại");
+        }
+
+        if ((enrollment.student as any).toString() !== student._id.toString()) {
             throw AppError.forbiddenError("Bạn không có quyền truy cập enrollment này");
         }
 
