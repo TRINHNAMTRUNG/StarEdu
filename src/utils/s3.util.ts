@@ -41,14 +41,14 @@ class S3Util {
     ): Promise<string> {
         try {
             const finalFileName = fileName || `${uuidv4()}${path.extname(fileName || ".jpg")}`;
-            const key = `${folder}/${finalFileName}`; // ✅ Đơn giản hơn
+            const key = `${folder}/${finalFileName}`;
 
             const command = new PutObjectCommand({
                 Bucket: this.bucketName,
                 Key: key,
                 Body: file,
-                ContentType: contentType || this.getContentType(finalFileName),
-                ACL: "public-read"
+                ContentType: contentType || this.getContentType(finalFileName)
+                // ❌ REMOVED: ACL: "public-read" - bucket không cho phép ACLs
             });
 
             await this.s3Client.send(command);
@@ -152,12 +152,13 @@ class S3Util {
         expiresIn: number = 900
     ): Promise<{ uploadUrl: string; fileUrl: string; key: string }> {
         try {
-            const key = `${folder}/${fileName}`; // ✅ Đơn giản
+            const key = `${folder}/${fileName}`;
 
             const command = new PutObjectCommand({
                 Bucket: this.bucketName,
                 Key: key,
                 ContentType: this.getContentType(fileName)
+                // ❌ REMOVED: ACL - không set ACL trong presigned URL
             });
 
             const uploadUrl = await getSignedUrl(this.s3Client, command, { expiresIn });

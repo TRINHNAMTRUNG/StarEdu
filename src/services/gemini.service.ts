@@ -397,28 +397,17 @@ ${sentences.map((s, i) => `${i + 1}. "${s}"`).join("\n")}
             required: ["suggestions", "required_words"]
         };
 
-        const prompt = `
-Bạn là giáo viên tiếng Anh. Hãy gợi ý 5 COLLOCATION (cụm từ) phù hợp để học sinh viết câu.
+        const prompt = `${this.getVietnameseInstruction("giáo viên tiếng Anh chuyên gợi ý từ vựng")}
 
 **2 TỪ CHO TRƯỚC:**
 "${requiredWords[0]}" và "${requiredWords[1]}"
-${contextText}
 
 **YÊU CẦU:**
-1. Đưa ra ĐÚNG 5 collocation phổ biến, tự nhiên trong tiếng Anh
-2. Mỗi collocation phải SỬ DỤNG ÍT NHẤT 1 trong 2 từ cho trước
-3. Với mỗi collocation:
-   - Viết cụm từ đầy đủ (VD: "accept the offer", "so much")
-   - Nghĩa tiếng Việt
-   - 1 câu ví dụ sử dụng collocation đó
+1. Đưa ra ĐÚNG 5 collocation phổ biến, tự nhiên
+2. Mỗi collocation phải sử dụng ít nhất 1 trong 2 từ
+3. Cung cấp nghĩa tiếng Việt và câu ví dụ
 
-**VÍ DỤ:**
-Nếu 2 từ là "accept" và "so":
-- Collocation 1: "accept the offer" - chấp nhận lời đề nghị - "I decided to accept the offer from Google."
-- Collocation 2: "so much" - rất nhiều - "Thank you so much for your help."
-...
-
-**OUTPUT FORMAT:** JSON với 5 suggestions
+**OUTPUT:** JSON hoàn toàn bằng tiếng Việt với 5 gợi ý
 `.trim();
 
         try {
@@ -450,13 +439,14 @@ Nếu 2 từ là "accept" và "so":
 
     /**
      * ========================================
-     * API 1.2: CHẤM BÀI TEXT WRITING
+     * API 1.2: CHẤM BÀI TEXT WRITING (CẢI THIỆN)
      * ========================================
      * Chấm câu dựa vào 2 từ cho trước (KHÔNG CÓ HÌNH ẢNH)
      */
     async checkTextWriting(sentence: string, requiredWords: string[], context?: string): Promise<any> {
         const contextText = context ? `\n**NGỮ CẢNH:** ${context}` : "";
 
+        // Schema giống image writing nhưng bỏ image_relevance
         const schema = {
             type: Type.OBJECT,
             properties: {
@@ -551,8 +541,7 @@ Nếu 2 từ là "accept" và "so":
             required: ["meaning", "grammar", "vocabulary", "correction", "overall_score", "feedback_summary"]
         };
 
-        const prompt = `
-Bạn là giáo viên tiếng Anh. Hãy CHẤM BÀI câu học sinh viết.
+        const prompt = `${this.getVietnameseInstruction("giáo viên tiếng Anh chuyên chấm bài writing")}
 
 **YÊU CẦU ĐỀ BÀI:**
 Viết câu hoàn chỉnh, có ý nghĩa, SỬ DỤNG ĐÚNG 2 từ: "${requiredWords[0]}" và "${requiredWords[1]}"
@@ -561,42 +550,28 @@ ${contextText}
 **CÂU HỌC SINH VIẾT:**
 "${sentence}"
 
+**RUBRIC CHẤM ĐIỂM TEXT WRITING (0-100):**
+- **Câu hoàn hảo (ngữ pháp + 2 từ + ý nghĩa rõ ràng)** = 90-100 điểm
+- **Câu tốt, có nghĩa, dùng đúng 2 từ nhưng có lỗi nhỏ** = 70-89 điểm  
+- **Câu có nghĩa nhưng thiếu 1 từ bắt buộc** = 60-70 điểm
+- **Câu có lỗi ngữ pháp nghiêm trọng** = 30-59 điểm
+- **Câu không có nghĩa hoặc sai hoàn toàn** = <30 điểm
+
 **NHIỆM VỤ CHẤM BÀI:**
 
-📌 **1. Ý NGHĨA:**
-   - Câu có đúng nghĩa, truyền tải ý tưởng rõ ràng không?
-   - Giải thích chi tiết
+📌 **1. Ý NGHĨA:** Câu có truyền tải ý tưởng rõ ràng không?
 
-📌 **2. NGỮ PHÁP:**
-   - Tìm TẤT CẢ lỗi ngữ pháp (thì, chủ-động từ, giới từ, mạo từ...)
-   - Với mỗi lỗi: type, description, incorrect_part, suggestion
-   - Nếu KHÔNG CÓ LỖI → errors = []
+📌 **2. NGỮ PHÁP:** Tìm tất cả lỗi, nếu không có → errors = []
 
-📌 **3. TỪ VỰNG & COLLOCATION:**
-   - Kiểm tra lỗi chính tả, collocation sai, từ không phù hợp
-   - Khen ngợi collocation dùng ĐÚNG
-   - **QUAN TRỌNG:** Đánh giá việc sử dụng 2 từ BẮT BUỘC:
-     * Có sử dụng đủ 2 từ không?
-     * Sử dụng đúng nghĩa, đúng ngữ cảnh không?
-     * Có tạo thành collocation tốt không?
+📌 **3. TỪ VỰNG:** 
+   - **QUAN TRỌNG**: Nếu has_issues = true thì issues phải có ít nhất 1 item
+   - Đánh giá 2 từ bắt buộc trong required_words_usage
 
-📌 **4. CHỈNH SỬA:**
-   - Đưa ra câu đã sửa HOÀN CHỈNH
-   - Liệt kê từng thay đổi
-   - Nếu câu HOÀN HẢO → changes = []
+📌 **4. CHỈNH SỬA:** Chỉ sửa lỗi, không viết lại toàn bộ
 
-📌 **5. ĐÁNH GIÁ TỔNG QUÁT:**
-   - **overall_score (0-100):**
-     * 90-100: Xuất sắc (câu hoàn hảo)
-     * 70-89: Tốt (câu đúng, có thể cải thiện nhỏ)
-     * 50-69: Khá (có lỗi nhưng hiểu được ý)
-     * <50: Cần cải thiện nhiều
-   - **feedback_summary:** Nhận xét KHÍCH LỆ + gợi ý cải thiện
-     * Luôn bắt đầu bằng lời khen (nếu có điểm tốt)
-     * Gợi ý cụ thể để cải thiện
-     * Tone thân thiện, động viên
+📌 **5. ĐIỂM & PHẢN HỒI:** Theo rubric, tone khích lệ
 
-**OUTPUT FORMAT:** JSON theo schema
+**OUTPUT:** JSON hoàn toàn bằng tiếng Việt
 `.trim();
 
         try {
@@ -606,7 +581,7 @@ ${contextText}
                 config: {
                     responseMimeType: "application/json",
                     responseSchema: schema,
-                    temperature: 0.3
+                    temperature: 0.2
                 }
             });
 
@@ -615,7 +590,11 @@ ${contextText}
                 throw AppError.internalServerError("Gemini trả về dữ liệu rỗng.");
             }
 
-            const result = JSON.parse(jsonString);
+            let result = JSON.parse(jsonString); // ✅ FIX: đổi const thành let
+
+            // ✅ VALIDATION: Đảm bảo logic nhất quán
+            result = this.validateTextWritingResult(result, sentence, requiredWords);
+
             console.log(`✅ [GeminiService] Text writing checked, score: ${result.overall_score}`);
             return result;
 
@@ -659,33 +638,21 @@ ${contextText}
             required: ["suggestions", "required_words"]
         };
 
-        const prompt = `
-Bạn là giáo viên tiếng Anh. Hãy gợi ý 5 COLLOCATION phù hợp với HÌNH ẢNH và 2 từ cho trước.
+        const prompt = `${this.getVietnameseInstruction("giáo viên tiếng Anh chuyên gợi ý từ vựng dựa trên hình ảnh")}
 
 **2 TỪ CHO TRƯỚC:**
 "${requiredWords[0]}" và "${requiredWords[1]}"
-${contextText}
 
 **YÊU CẦU:**
-1. **QUAN SÁT HÌNH ẢNH kỹ:** Xem nội dung, hoàn cảnh, hành động trong ảnh
-2. Đưa ra 5 collocation:
-   - Sử dụng ít nhất 1 trong 2 từ cho trước
-   - **PHÙ HỢP VỚI NỘI DUNG HÌNH ẢNH** (đây là điểm QUAN TRỌNG NHẤT)
-   - Tự nhiên, phổ biến trong tiếng Anh
-3. Với mỗi collocation: cụm từ + nghĩa + câu ví dụ liên quan đến ảnh
+1. **QUAN SÁT HÌNH ẢNH KỸ CÀNG** - xem nội dung, hoàn cảnh, hành động
+2. Đưa ra 5 collocation phù hợp với nội dung ảnh
+3. Mỗi collocation sử dụng ít nhất 1 trong 2 từ
+4. Cung cấp nghĩa tiếng Việt và câu ví dụ liên quan ảnh
 
-**VÍ DỤ:**
-Nếu ảnh là "người đàn ông đeo ba lô đi qua cầu" và 2 từ là "backpack", "across":
-- "wearing a backpack" - đeo ba lô - "A man wearing a black backpack is walking."
-- "walk across" - đi qua - "He walks across the rusty bridge."
-- "carry across" - mang qua - "He carries his bag across the bridge."
-...
-
-**OUTPUT FORMAT:** JSON với 5 suggestions
+**OUTPUT:** JSON hoàn toàn bằng tiếng Việt với 5 gợi ý
 `.trim();
 
         try {
-            // Gọi Gemini với image URL — role trên Content, parts dùng camelCase inlineData/mimeType
             const response: GenerateContentResponse = await this.ai.models.generateContent({
                 model: "gemini-2.0-flash-exp",
                 contents: [
@@ -695,8 +662,8 @@ Nếu ảnh là "người đàn ông đeo ba lô đi qua cầu" và 2 từ là "
                             { text: prompt },
                             {
                                 inlineData: {
-                                    mimeType: "image/jpeg", // hoặc "image/png" tùy file
-                                    data: await this.fetchImageAsBase64(imageUrl) // Helper function fetch ảnh
+                                    mimeType: "image/jpeg",
+                                    data: await this.fetchImageAsBase64(imageUrl)
                                 }
                             }
                         ]
@@ -727,12 +694,11 @@ Nếu ảnh là "người đàn ông đeo ba lô đi qua cầu" và 2 từ là "
 
     /**
      * ========================================
-     * API 2.2: CHẤM BÀI IMAGE WRITING
+     * API 2.2: CHẤM BÀI IMAGE WRITING (CẢI THIỆN)
      * ========================================
-     * Chấm câu dựa vào HÌNH ẢNH + 2 từ cho trước
      */
     async checkImageWriting(sentence: string, imageUrl: string, requiredWords: string[], context?: string): Promise<any> {
-        const contextText = context ? `\n**NGỮ CẢNH:** ${context}` : "";
+        const contextText = context ? `\n**NGỮ CẢNH BỔ SUNG:** ${context}` : "";
 
         const schema = {
             type: Type.OBJECT,
@@ -742,7 +708,7 @@ Nếu ảnh là "người đàn ông đeo ba lô đi qua cầu" và 2 từ là "
                     properties: {
                         is_correct: { type: Type.BOOLEAN },
                         explanation: { type: Type.STRING },
-                        image_relevance: { type: Type.STRING } // THÊM: Đánh giá khớp với ảnh
+                        image_relevance: { type: Type.STRING }
                     },
                     required: ["is_correct", "explanation", "image_relevance"]
                 },
@@ -829,8 +795,7 @@ Nếu ảnh là "người đàn ông đeo ba lô đi qua cầu" và 2 từ là "
             required: ["meaning", "grammar", "vocabulary", "correction", "overall_score", "feedback_summary"]
         };
 
-        const prompt = `
-Bạn là giáo viên tiếng Anh. Hãy CHẤM BÀI câu học sinh viết dựa trên HÌNH ẢNH.
+        const prompt = `${this.getVietnameseInstruction("giáo viên tiếng Anh chuyên chấm bài writing")}
 
 **YÊU CẦU ĐỀ BÀI:**
 Quan sát hình ảnh, viết câu hoàn chỉnh, SỬ DỤNG ĐÚNG 2 từ: "${requiredWords[0]}" và "${requiredWords[1]}"
@@ -839,37 +804,47 @@ ${contextText}
 **CÂU HỌC SINH VIẾT:**
 "${sentence}"
 
-**NHIỆM VỤ CHẤM BÀI:**
+${this.getImageWritingRubric()}
 
-📌 **1. Ý NGHĨA:**
-   - Câu có đúng nghĩa, truyền tải ý tưởng rõ ràng không?
-   - **QUAN TRỌNG:** Câu có PHÙ HỢP VỚI NỘI DUNG HÌNH ẢNH không?
-     * Mô tả đúng hành động/sự vật trong ảnh?
-     * Nếu câu ngữ pháp đúng nhưng KHÔNG LIÊN QUAN đến ảnh → Trừ điểm nặng
-   - Giải thích chi tiết
+${this.getImageDetailCheckInstruction()}
 
-📌 **2. NGỮ PHÁP:**
-   - Tìm tất cả lỗi ngữ pháp
-   - Nếu không có lỗi → errors = []
+**NHIỆM VỤ CHẤM BÀI CHI TIẾT:**
 
-📌 **3. TỪ VỰNG & COLLOCATION:**
-   - Kiểm tra lỗi chính tả, collocation
-   - Đánh giá việc sử dụng 2 từ BẮT BUỘC
-   - Khen ngợi collocation đúng
+📌 **1. Ý NGHĨA (meaning):**
+   - **is_correct**: true nếu câu có nghĩa về mặt ngữ pháp (dù có thể không khớp ảnh)
+   - **explanation**: Giải thích câu có nghĩa hay không
+   - **image_relevance**: RIÊNG BIỆT đánh giá độ khớp với ảnh
+     * Nếu câu đúng ngữ pháp nhưng không mô tả ảnh → "Câu có nghĩa nhưng không liên quan đến nội dung hình ảnh"
+     * Nếu sai chi tiết → "Câu mô tả đúng ý chính nhưng sai chi tiết: [liệt kê chi tiết sai]"
+     * Nếu hoàn hảo → "Câu mô tả chính xác và phù hợp với hình ảnh"
 
-📌 **4. CHỈNH SỬA:**
-   - Đưa ra câu đã sửa (nếu câu hoàn hảo → changes = [])
+📌 **2. NGỮ PHÁP (grammar):**
+   - Tìm TẤT CẢ lỗi ngữ pháp (thì, chủ-động từ, giới từ, mạo từ...)
+   - Nếu KHÔNG CÓ LỖI → has_errors = false, errors = []
+   - Nếu có lỗi → liệt kê đầy đủ từng lỗi
 
-📌 **5. ĐÁNH GIÁ TỔNG QUÁT:**
-   - **overall_score (0-100):**
-     * Trừ điểm NẶNG nếu câu không phù hợp với ảnh
-     * 90-100: Xuất sắc (câu perfect + khớp ảnh)
-     * 70-89: Tốt
-     * 50-69: Khá
-     * <50: Cần cải thiện
-   - **feedback_summary:** Nhận xét KHÍCH LỆ, động viên
+📌 **3. TỪ VỰNG (vocabulary):**
+   - **QUAN TRỌNG**: Nếu has_issues = true thì issues PHẢI có ít nhất 1 item
+   - Kiểm tra 2 từ bắt buộc:
+     * Nếu thiếu từ → issues phải có: "missing_required_word"
+     * Nếu dùng sai → issues phải có: "incorrect_word_usage"
+   - Khen ngợi collocation đúng trong positive_collocations
 
-**OUTPUT FORMAT:** JSON theo schema
+📌 **4. CHỈNH SỬA (correction):**
+   - **NGUYÊN TẮC**: Chỉ sửa lỗi, KHÔNG viết lại toàn bộ câu
+   - Nếu ngữ pháp đúng, chỉ gợi ý thêm từ thiếu (nếu có)
+   - Nếu câu hoàn hảo → changes = []
+
+📌 **5. ĐIỂM TỔNG (overall_score):**
+   - Áp dụng CHÍNH XÁC rubric đã nêu
+   - Ví dụ: câu đúng ngữ pháp + đúng 2 từ nhưng không khớp ảnh = 50-60 điểm
+
+📌 **6. PHẢN HỒI (feedback_summary):**
+   - Bắt đầu bằng điểm tích cực (nếu có)
+   - Đưa ra gợi ý cải thiện cụ thể
+   - Tone khích lệ, thân thiện
+
+**OUTPUT:** JSON hoàn toàn bằng tiếng Việt theo schema
 `.trim();
 
         try {
@@ -892,7 +867,7 @@ ${contextText}
                 config: {
                     responseMimeType: "application/json",
                     responseSchema: schema,
-                    temperature: 0.3
+                    temperature: 0.2 // Giảm temperature để kết quả nhất quán hơn
                 }
             });
 
@@ -901,7 +876,11 @@ ${contextText}
                 throw AppError.internalServerError("Gemini trả về dữ liệu rỗng.");
             }
 
-            const result = JSON.parse(jsonString);
+            let result = JSON.parse(jsonString); // ✅ FIX: đổi const thành let
+
+            // ✅ VALIDATION: Đảm bảo logic nhất quán
+            result = this.validateImageWritingResult(result, sentence, requiredWords);
+
             console.log(`✅ [GeminiService] Image writing checked, score: ${result.overall_score}`);
             return result;
 
@@ -910,6 +889,154 @@ ${contextText}
             console.error("❌ [GeminiService] checkImageWriting error:", err);
             throw AppError.internalServerError("Lỗi khi chấm bài image writing.", err?.message);
         }
+    }
+
+    /**
+     * ========================================
+     * HELPER: Tạo instruction tiếng Việt chuẩn
+     * ========================================
+     */
+    private getVietnameseInstruction(role: string = "giáo viên tiếng Anh"): string {
+        return `Bạn là ${role} chuyên nghiệp.
+
+**YÊU CẦU NGÔN NGỮ BẮT BUỘC:**
+- Trả lời HOÀN TOÀN bằng tiếng Việt
+- Sử dụng thuật ngữ giáo dục phù hợp cho học sinh Việt Nam
+- Giải thích rõ ràng, dễ hiểu, tone thân thiện và khích lệ
+- Tất cả feedback phải bằng tiếng Việt (không được lẫn tiếng Anh)
+
+`;
+    }
+
+    /**
+     * ========================================
+     * HELPER: Rubric chấm điểm chuẩn cho image writing
+     * ========================================
+     */
+    private getImageWritingRubric(): string {
+        return `
+**RUBRIC CHẤM ĐIỂM CHUẨN (0-100):**
+
+📊 **ĐIỂM SỐ THEO TIÊU CHÍ:**
+- **Ngữ pháp đúng + 2 từ đúng + mô tả chính xác ảnh** = 90-100 điểm
+- **Ngữ pháp đúng + 2 từ đúng + KHÔNG liên quan ảnh** = 50-60 điểm  
+- **Ngữ pháp đúng + thiếu 1 từ + mô tả đúng ảnh** = 60-70 điểm
+- **Ngữ pháp có lỗi + 2 từ + không liên quan ảnh** = 20-35 điểm
+- **Chi tiết sai về ảnh (giới tính, màu sắc, vật liệu)** = trừ 15-20 điểm
+
+📋 **NGUYÊN TẮC CHẤM:**
+1. **meaning.is_correct** = true nếu câu có nghĩa về mặt ngữ pháp (dù không khớp ảnh)
+2. **image_relevance** riêng biệt đánh giá độ khớp với ảnh
+3. **vocabulary.issues** phải có issue cụ thể nếu has_issues = true
+4. **correction** chỉ sửa lỗi, không viết lại toàn bộ câu nếu ngữ pháp đúng
+
+`;
+    }
+
+    /**
+     * ========================================
+     * HELPER: Chi tiết cần kiểm tra trong ảnh
+     * ========================================
+     */
+    private getImageDetailCheckInstruction(): string {
+        return `
+**KIỂM TRA CHI TIẾT ẢNH CỤ THỂ:**
+- Giới tính nhân vật (man/woman)
+- Màu sắc đồ vật (red/blue/black...)
+- Vật liệu (wooden/stone/metal...)
+- Hành động chính xác (walking/running/sitting...)
+- Vị trí không gian (across/on/under...)
+
+**NẾU SAI CHI TIẾT:**
+- Ghi nhận trong image_relevance
+- Trừ điểm tương ứng (15-20 điểm)
+- Đưa vào correction với lý do cụ thể
+
+`;
+    }
+
+    /**
+     * ========================================
+     * VALIDATION HELPER: Đảm bảo logic kết quả image writing
+     * ========================================
+     */
+    private validateImageWritingResult(result: any, sentence: string, requiredWords: string[]): any {
+        // ✅ Fix vocabulary.issues nếu has_issues = true
+        if (result.vocabulary?.has_issues === true && (!result.vocabulary.issues || result.vocabulary.issues.length === 0)) {
+            result.vocabulary.issues = [{
+                incorrect_usage: "missing_validation",
+                issue_type: "validation_error",
+                explanation: "Cần kiểm tra kỹ hơn về từ vựng",
+                correct_suggestion: "Sử dụng đúng từ vựng yêu cầu"
+            }];
+        }
+
+        // ✅ Kiểm tra thiếu từ bắt buộc
+        const usedWords = requiredWords.filter(word =>
+            sentence.toLowerCase().includes(word.toLowerCase())
+        );
+
+        if (usedWords.length < requiredWords.length) {
+            const missingWords = requiredWords.filter(word =>
+                !sentence.toLowerCase().includes(word.toLowerCase())
+            );
+
+            result.vocabulary.has_issues = true;
+            result.vocabulary.issues = result.vocabulary.issues || [];
+
+            for (const missingWord of missingWords) {
+                result.vocabulary.issues.push({
+                    incorrect_usage: `Thiếu từ "${missingWord}"`,
+                    issue_type: "missing_required_word",
+                    explanation: `Câu chưa sử dụng từ bắt buộc "${missingWord}"`,
+                    correct_suggestion: `Thêm từ "${missingWord}" vào câu`
+                });
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * ========================================
+     * VALIDATION HELPER: Đảm bảo logic kết quả text writing
+     * ========================================
+     */
+    private validateTextWritingResult(result: any, sentence: string, requiredWords: string[]): any {
+        // ✅ Fix vocabulary.issues tương tự image writing
+        if (result.vocabulary?.has_issues === true && (!result.vocabulary.issues || result.vocabulary.issues.length === 0)) {
+            result.vocabulary.issues = [{
+                incorrect_usage: "missing_validation",
+                issue_type: "validation_error",
+                explanation: "Cần kiểm tra kỹ hơn về từ vựng",
+                correct_suggestion: "Sử dụng đúng từ vựng yêu cầu"
+            }];
+        }
+
+        // ✅ Kiểm tra thiếu từ bắt buộc
+        const usedWords = requiredWords.filter(word =>
+            sentence.toLowerCase().includes(word.toLowerCase())
+        );
+
+        if (usedWords.length < requiredWords.length) {
+            const missingWords = requiredWords.filter(word =>
+                !sentence.toLowerCase().includes(word.toLowerCase())
+            );
+
+            result.vocabulary.has_issues = true;
+            result.vocabulary.issues = result.vocabulary.issues || [];
+
+            for (const missingWord of missingWords) {
+                result.vocabulary.issues.push({
+                    incorrect_usage: `Thiếu từ "${missingWord}"`,
+                    issue_type: "missing_required_word",
+                    explanation: `Câu chưa sử dụng từ bắt buộc "${missingWord}"`,
+                    correct_suggestion: `Thêm từ "${missingWord}" vào câu`
+                });
+            }
+        }
+
+        return result;
     }
 
     /**

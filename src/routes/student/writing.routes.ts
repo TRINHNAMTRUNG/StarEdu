@@ -28,20 +28,18 @@ writingRoutes.use(authenticateToken);
 
 /**
  * ============================================
- * API #1: POST /api/writing/text-writing/suggest-collocations
+ * API #1: POST /student/writing/text-writing/suggest-collocations
  * Gợi ý 5 collocation cho text writing
  * ============================================
  * 
  * Use Case:
- * - Học sinh nhận đề bài: "Viết câu với 2 từ: accept, so"
- * - Học sinh bấm "Gợi ý" → Hiện 5 collocation để tham khảo
+ * - Học sinh lấy đề ngẫu nhiên từ GET /student/writing/text-writing/random
+ * - Học sinh bấm "Gợi ý" → gửi prompt_id để nhận 5 collocation
  * 
  * Request Body Example:
  * {
- *   "required_words": ["accept", "so"]
+ *   "prompt_id": "67503a1b2f8c9d4e5a6b7c8d"
  * }
- * 
- * Note: "context" đã được loại bỏ từ client; backend sử dụng context cố định nội bộ.
  */
 writingRoutes.post(
     "/text-writing/suggest-collocations",
@@ -51,7 +49,7 @@ writingRoutes.post(
 
 /**
  * ============================================
- * API #2: POST /api/writing/text-writing/check-sentence
+ * API #2: POST /student/writing/text-writing/check-sentence
  * Chấm bài và phân tích câu (text-only)
  * ============================================
  * 
@@ -60,12 +58,9 @@ writingRoutes.post(
  * 
  * Request Body Example:
  * {
- *   "sentence": "she didn't accept the offer, so the manager had to find another candidate",
- *   "required_words": ["accept", "so"]
+ *   "prompt_id": "67503a1b2f8c9d4e5a6b7c8d",
+ *   "sentence": "she didn't accept the offer, so the manager had to find another candidate"
  * }
- * 
- * Response: meaning, grammar, vocabulary, correction, overall_score, feedback_summary
- * Note: backend áp context cố định cho việc chấm (không nhận từ client).
  */
 writingRoutes.post(
     "/text-writing/check-sentence",
@@ -75,20 +70,18 @@ writingRoutes.post(
 
 /**
  * ============================================
- * API #3: POST /api/writing/image-writing/suggest-collocations
+ * API #3: POST /student/writing/image-writing/suggest-collocations
  * Gợi ý 5 collocation dựa vào ảnh + 2 từ
  * ============================================
  * 
  * Use Case:
- * - Học sinh xem ảnh + 2 từ, bấm "Gợi ý" để nhận collocation phù hợp với nội dung ảnh
+ * - Học sinh lấy đề image từ GET /student/writing/image-writing/random
+ * - Học sinh xem ảnh + 2 từ, bấm "Gợi ý"
  * 
  * Request Body Example:
  * {
- *   "image_url": "https://s3.amazonaws.com/bucket/image123.jpg",
- *   "required_words": ["backpack", "across"]
+ *   "prompt_id": "67503a1b2f8c9d4e5a6b7c8d"
  * }
- * 
- * Note: backend sử dụng context nội bộ để nhấn mạnh tính liên quan tới ảnh.
  */
 writingRoutes.post(
     "/image-writing/suggest-collocations",
@@ -98,22 +91,15 @@ writingRoutes.post(
 
 /**
  * ============================================
- * API #4: POST /api/writing/image-writing/check-sentence
+ * API #4: POST /student/writing/image-writing/check-sentence
  * Chấm bài dựa vào ảnh + 2 từ
  * ============================================
  * 
- * Use Case:
- * - Học sinh viết câu mô tả ảnh rồi bấm "Chấm bài"
- * 
  * Request Body Example:
  * {
- *   "sentence": "A man wearing a backpack walks across the bridge.",
- *   "image_url": "https://s3.amazonaws.com/bucket/image123.jpg",
- *   "required_words": ["backpack", "across"]
+ *   "prompt_id": "67503a1b2f8c9d4e5a6b7c8d",
+ *   "sentence": "A man wearing a backpack walks across the bridge."
  * }
- * 
- * Response includes image_relevance field inside meaning section.
- * Note: backend áp context/rubric cố định cho việc chấm ảnh.
  */
 writingRoutes.post(
     "/image-writing/check-sentence",
@@ -127,37 +113,33 @@ writingRoutes.post(
  * ============================================
  */
 
-// API 3.1: POST /api/writing/email-writing/generate-prompt
-// No body required (DTO empty) - backend will ask Gemini to generate TOEIC/ETS style email prompt
+// POST /student/writing/email-writing/generate-prompt
 writingRoutes.post(
     "/email-writing/generate-prompt",
     validationBody(GenerateEmailPromptReqDto),
     writingController.generateEmailPrompt
 );
 
-// API 3.2: POST /api/writing/email-writing/suggest-keywords
-// Body: { prompt_email: string }
+// POST /student/writing/email-writing/suggest-keywords
 writingRoutes.post(
     "/email-writing/suggest-keywords",
     validationBody(SuggestEmailKeywordsReqDto),
     writingController.suggestEmailKeywords
 );
 
-// API 3.3: POST /api/writing/email-writing/check-email
-// Body: { prompt_email: string, response_email: string }
+// POST /student/writing/email-writing/check-email
 writingRoutes.post(
     "/email-writing/check-email",
     validationBody(CheckEmailWritingReqDto),
     writingController.checkEmailWriting
 );
 
-// NEW: GET random prompt for text writing
+// GET /student/writing/text-writing/random
 writingRoutes.get(
     "/text-writing/random",
     validationQuery(GetRandomPromptReqDto),
     async (req, res, next) => {
         try {
-            const q = (req as any).validatedQuery as GetRandomPromptReqDto | undefined;
             const adminService = container.resolve(AdminWritingService);
             const prompt = await adminService.getRandomPrompt("text" as any);
             return res.status(200).json({
@@ -173,13 +155,12 @@ writingRoutes.get(
     }
 );
 
-// NEW: GET random prompt for image writing
+// GET /student/writing/image-writing/random
 writingRoutes.get(
     "/image-writing/random",
     validationQuery(GetRandomPromptReqDto),
     async (req, res, next) => {
         try {
-            const q = (req as any).validatedQuery as GetRandomPromptReqDto | undefined;
             const adminService = container.resolve(AdminWritingService);
             const prompt = await adminService.getRandomPrompt("image" as any);
             return res.status(200).json({
