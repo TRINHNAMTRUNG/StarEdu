@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { container } from "tsyringe";
 import LessonController from "../../controllers/lesson.controller";
+import CourseController from "../../controllers/course.controller";
 import { validationBody, validationParams } from "../../middlewares/validationError.middleware";
 import { authenticateToken, authorizeRoles } from "../../middlewares/auth.middleware";
 import { UserRole } from "../../models/user.model";
@@ -13,11 +14,13 @@ import {
     CreateLessonReqDto,
     UpdateLessonReqDto,
     CourseIdParamDto,
-    BulkToggleFreeLessonsReqDto
+    BulkToggleFreeLessonsReqDto,
+    ReorderSectionsReqDto
 } from "../../dtos/request/lesson.request.dto";
 
 const adminLessonRoutes = Router();
 const lessonController = container.resolve(LessonController);
+const courseController = container.resolve(CourseController);
 
 // Tat ca admin routes can auth va role check
 adminLessonRoutes.use(authenticateToken, authorizeRoles(UserRole.ADMIN));
@@ -101,6 +104,19 @@ adminLessonRoutes.patch(
     validationParams(CourseIdParamDto),
     validationBody(BulkToggleFreeLessonsReqDto),
     lessonController.bulkToggleFreeLessons
+);
+
+// ============================================
+// REORDER SECTIONS
+// ============================================
+
+// API #10: PATCH /admin/lessons/:id/reorder-sections
+// Mục đích: Thay đổi thứ tự sections trong lesson
+adminLessonRoutes.patch(
+    "/:id/reorder-sections",
+    validationParams(LessonIdParamDto),
+    validationBody(ReorderSectionsReqDto),
+    courseController.reorderSectionsInLesson
 );
 
 export default adminLessonRoutes;

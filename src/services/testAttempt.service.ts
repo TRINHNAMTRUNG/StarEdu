@@ -290,13 +290,16 @@ class TestAttemptService {
             limit,
             data: attempts.map(a => ({
                 _id: a._id.toString(),
-                test: a.test_id,
+                test_id: a.test_id,
                 started_at: a.started_at,
                 completed_at: a.completed_at,
                 status: a.status,
                 total_score: a.total_score,
                 listening_score: a.listening_score,
-                reading_score: a.reading_score
+                reading_score: a.reading_score,
+                correct_answers: a.correct_answers,
+                total_questions: a.total_questions,
+                time_used: a.time_used
             }))
         };
     };

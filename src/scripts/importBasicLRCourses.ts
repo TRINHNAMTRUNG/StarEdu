@@ -64,13 +64,16 @@ async function importBasicLRCourses() {
             type: 'video',
             order: 1,
             video_url: 'https://staredu-app-bucket.s3.ap-southeast-1.amazonaws.com/videos/Talk+About+the+Weather++Daily+English+Conversation++English+Speaking+%26+Listening+Practice.mp4',
-            duration_minutes: 15
+            duration_minutes: 15,
+            mindmap_url: undefined
           },
           {
             title: 'Mindmap: Sơ đồ 7 Part TOEIC',
             type: 'mindmap',
             order: 2,
-            duration_minutes: 10
+            duration_minutes: 10,
+            video_url: undefined,
+            mindmap_url: 'https://nativex.edu.vn/wp-content/uploads/2021/07/mindmap-hoc-tieng-anh.jpeg'
           }
         ]
       },
@@ -78,20 +81,23 @@ async function importBasicLRCourses() {
         title: 'Chương 2: Part 1 - Photographs',
         description: 'Kỹ thuật làm bài mô tả hình ảnh',
         order: 2,
-        is_published: true,
+        is_published: false,
         sections: [
           {
             title: 'Video: Chiến lược Part 1',
             type: 'video',
             order: 1,
             video_url: 'https://staredu-app-bucket.s3.ap-southeast-1.amazonaws.com/videos/Talk+About+the+Weather++Daily+English+Conversation++English+Speaking+%26+Listening+Practice.mp4',
-            duration_minutes: 20
+            duration_minutes: 20,
+            mindmap_url: undefined
           },
           {
             title: 'Exercise: 10 câu luyện tập Part 1',
             type: 'exercise',
             order: 2,
-            duration_minutes: 15
+            duration_minutes: 15,
+            video_url: undefined,
+            mindmap_url: undefined
           }
         ]
       },
@@ -99,14 +105,15 @@ async function importBasicLRCourses() {
         title: 'Chương 3: Part 5 - Grammar & Vocabulary',
         description: 'Ngữ pháp và từ vựng cơ bản',
         order: 3,
-        is_published: true,
+        is_published: false,
         sections: [
           {
             title: 'Video: Các dạng câu hỏi Part 5',
             type: 'video',
             order: 1,
             video_url: 'https://staredu-app-bucket.s3.ap-southeast-1.amazonaws.com/videos/Talk+About+the+Weather++Daily+English+Conversation++English+Speaking+%26+Listening+Practice.mp4',
-            duration_minutes: 25
+            duration_minutes: 25,
+            mindmap_url: undefined
           }
         ]
       }
@@ -128,6 +135,7 @@ async function importBasicLRCourses() {
           type: sectionData.type,
           order: sectionData.order,
           video_url: sectionData.video_url || null,
+          mindmap_url: sectionData.mindmap_url || null,
           duration_minutes: sectionData.duration_minutes
         });
       }
@@ -164,13 +172,16 @@ async function importBasicLRCourses() {
             type: 'video',
             order: 1,
             video_url: 'https://staredu-app-bucket.s3.ap-southeast-1.amazonaws.com/videos/Talk+About+the+Weather++Daily+English+Conversation++English+Speaking+%26+Listening+Practice.mp4',
-            duration_minutes: 15
+            duration_minutes: 15,
+            mindmap_url: undefined
           },
           {
             title: 'Mindmap: Sơ đồ ngữ pháp TOEIC',
             type: 'mindmap',
             order: 2,
-            duration_minutes: 10
+            duration_minutes: 10,
+            video_url: undefined,
+            mindmap_url: 'https://nativex.edu.vn/wp-content/uploads/2021/07/mindmap-hoc-tieng-anh.jpeg'
           }
         ]
       },
@@ -178,20 +189,23 @@ async function importBasicLRCourses() {
         title: 'Chương 2: Thì động từ (Verb Tenses)',
         description: '12 thì tiếng Anh thường gặp trong TOEIC',
         order: 2,
-        is_published: true,
+        is_published: false,
         sections: [
           {
             title: 'Video: Tổng quan 12 thì tiếng Anh',
             type: 'video',
             order: 1,
             video_url: 'https://staredu-app-bucket.s3.ap-southeast-1.amazonaws.com/videos/Talk+About+the+Weather++Daily+English+Conversation++English+Speaking+%26+Listening+Practice.mp4',
-            duration_minutes: 30
+            duration_minutes: 30,
+            mindmap_url: undefined
           },
           {
             title: 'Exercise: Chia động từ đúng thì',
             type: 'exercise',
             order: 2,
-            duration_minutes: 40
+            duration_minutes: 40,
+            video_url: undefined,
+            mindmap_url: undefined
           }
         ]
       },
@@ -199,20 +213,23 @@ async function importBasicLRCourses() {
         title: 'Chương 3: Từ loại (Parts of Speech)',
         description: 'Danh từ, động từ, tính từ, trạng từ...',
         order: 3,
-        is_published: true,
+        is_published: false,
         sections: [
           {
             title: 'Video: 8 từ loại chính trong tiếng Anh',
             type: 'video',
             order: 1,
             video_url: 'https://staredu-app-bucket.s3.ap-southeast-1.amazonaws.com/videos/Talk+About+the+Weather++Daily+English+Conversation++English+Speaking+%26+Listening+Practice.mp4',
-            duration_minutes: 30
+            duration_minutes: 30,
+            mindmap_url: undefined
           },
           {
             title: 'Exercise: Chọn từ loại đúng',
             type: 'exercise',
             order: 2,
-            duration_minutes: 40
+            duration_minutes: 40,
+            video_url: undefined,
+            mindmap_url: undefined
           }
         ]
       },
@@ -220,20 +237,23 @@ async function importBasicLRCourses() {
         title: 'Chương 4: Giới từ & Liên từ',
         description: 'In, on, at, because, although...',
         order: 4,
-        is_published: true,
+        is_published: false,
         sections: [
           {
             title: 'Video: Giới từ thường gặp',
             type: 'video',
             order: 1,
             video_url: 'https://staredu-app-bucket.s3.ap-southeast-1.amazonaws.com/videos/Talk+About+the+Weather++Daily+English+Conversation++English+Speaking+%26+Listening+Practice.mp4',
-            duration_minutes: 35
+            duration_minutes: 35,
+            mindmap_url: undefined
           },
           {
             title: 'Exercise: Điền giới từ đúng',
             type: 'exercise',
             order: 2,
-            duration_minutes: 45
+            duration_minutes: 45,
+            video_url: undefined,
+            mindmap_url: undefined
           }
         ]
       },
@@ -241,20 +261,23 @@ async function importBasicLRCourses() {
         title: 'Chương 5: Tổng ôn & Final Test',
         description: 'Ôn tập toàn bộ ngữ pháp + Thi thử',
         order: 5,
-        is_published: true,
+        is_published: false,
         sections: [
           {
             title: 'Video: Tổng ôn ngữ pháp TOEIC',
             type: 'video',
             order: 1,
             video_url: 'https://staredu-app-bucket.s3.ap-southeast-1.amazonaws.com/videos/Talk+About+the+Weather++Daily+English+Conversation++English+Speaking+%26+Listening+Practice.mp4',
-            duration_minutes: 40
+            duration_minutes: 40,
+            mindmap_url: undefined
           },
           {
             title: 'Final Test: 50 câu tổng hợp',
             type: 'quiz',
             order: 2,
-            duration_minutes: 60
+            duration_minutes: 60,
+            video_url: undefined,
+            mindmap_url: undefined
           }
         ]
       }
@@ -276,6 +299,7 @@ async function importBasicLRCourses() {
           type: sectionData.type,
           order: sectionData.order,
           video_url: sectionData.video_url || null,
+          mindmap_url: sectionData.mindmap_url || null,
           duration_minutes: sectionData.duration_minutes
         });
       }
@@ -288,13 +312,13 @@ async function importBasicLRCourses() {
     console.log(`Course 1: ${course1.title}`);
     console.log(`  - ID: ${course1._id}`);
     console.log(`  - Order: ${course1.order}`);
-    console.log(`  - Price: ${course1.price.toLocaleString('vi-VN')}đ`);
+    console.log(`  - Price: ${((course1 as any).price || 0).toLocaleString('vi-VN')}đ`);
     console.log(`  - Skill Groups: ${course1.skill_groups.join(', ')}`);
     console.log('');
     console.log(`Course 2: ${course2.title}`);
     console.log(`  - ID: ${course2._id}`);
     console.log(`  - Order: ${course2.order}`);
-    console.log(`  - Price: ${course2.price.toLocaleString('vi-VN')}đ`);
+    console.log(`  - Price: ${((course2 as any).price || 0).toLocaleString('vi-VN')}đ`);
     console.log(`  - Skill Groups: ${course2.skill_groups.join(', ')}`);
     console.log('');
     console.log('📝 Lưu ý: Cả 2 khóa học đều thuộc CHẶNG 1 (LR Cơ Bản 450+)');

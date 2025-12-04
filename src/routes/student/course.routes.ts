@@ -2,7 +2,7 @@ import { Router } from "express";
 import { container } from "tsyringe";
 import StudentCourseController from "../../controllers/student-course.controller";
 import { validationParams } from "../../middlewares/validationError.middleware";
-import { authenticateToken, authorizeRoles } from "../../middlewares/auth.middleware";
+import { authenticateToken, authorizeRoles, optionalAuth } from "../../middlewares/auth.middleware";
 import { UserRole } from "../../models/user.model";
 import { CourseIdParamDto } from "../../dtos/request/course.request.dto";
 
@@ -30,6 +30,7 @@ studentCourseRoutes.get(
 // API #4: GET /student/courses/:id/lessons (public with optional auth)
 studentCourseRoutes.get(
     "/:id/lessons",
+    optionalAuth, // ✅ Thêm optional auth để có req.user nếu có token
     validationParams(CourseIdParamDto),
     studentCourseController.getCourseLessons
 );

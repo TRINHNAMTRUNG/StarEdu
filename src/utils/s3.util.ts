@@ -47,8 +47,8 @@ class S3Util {
                 Bucket: this.bucketName,
                 Key: key,
                 Body: file,
-                ContentType: contentType || this.getContentType(finalFileName),
-                ACL: "public-read"
+                ContentType: contentType || this.getContentType(finalFileName)
+                // Note: ACL removed because bucket has ACL disabled (using bucket policy instead)
             });
 
             await this.s3Client.send(command);

@@ -32,9 +32,13 @@ class PaymentController {
             redirect_url
         );
 
+        console.log("🔹 Service result:", result);
+
         const response = instanceToPlain(
             plainToInstance(CreatePaymentResDto, result, { excludeExtraneousValues: true })
         );
+
+        console.log("🔹 Transformed response:", response);
 
         return res.status(201).json(
             ResponseFormat.successResponse(response, "Tạo thanh toán thành công", 201, req.requestId)
@@ -82,6 +86,23 @@ class PaymentController {
 
         return res.status(200).json(
             ResponseFormat.successResponse(response, "Lấy danh sách payments thành công", 200, req.requestId)
+        );
+    });
+
+    /**
+     * POST /student/payments/:id/verify
+     * Verify payment manually (for test env without IPN)
+     */
+    verifyPayment = asyncHandler(async (req: Request, res: Response) => {
+        if (!req.user) {
+            throw AppError.unauthorizedError("Chưa xác thực");
+        }
+
+        const { id } = req.params;
+        const result = await this.paymentService.verifyPayment(id, req.user.id);
+
+        return res.status(200).json(
+            ResponseFormat.successResponse(result, "Xác nhận thanh toán thành công", 200, req.requestId)
         );
     });
 

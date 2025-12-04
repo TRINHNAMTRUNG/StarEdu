@@ -56,4 +56,20 @@ studentPaymentRoutes.get(
     paymentController.getPaymentById
 );
 
+/**
+ * 4. POST /student/payments/:id/verify
+ * Mục đích: Xác nhận payment thủ công (cho test environment không có IPN)
+ * Input (path): id (paymentId)
+ * Output: { payment_id, status, message, enrollment_id? }
+ * Ghi chú:
+ *  - Dùng khi MoMo test env redirect về nhưng không gọi IPN webhook
+ *  - Tạo enrollment nếu payment pending → success
+ *  - Frontend gọi API này sau khi redirect về từ gateway
+ */
+studentPaymentRoutes.post(
+    "/:id/verify",
+    validationParams(PaymentIdParamDto),
+    paymentController.verifyPayment
+);
+
 export default studentPaymentRoutes;

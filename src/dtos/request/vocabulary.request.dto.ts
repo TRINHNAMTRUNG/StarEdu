@@ -80,3 +80,15 @@ export class SetIdParamDto {
     @IsMongoId()
     setId!: string;
 }
+
+export class GenerateVocabularySetDto {
+    @IsNotEmpty()
+    @IsString()
+    @Length(1, 100)
+    topic!: string;
+
+    @IsOptional()
+    @IsNumber()
+    @Min(5)
+    count?: number; // Mặc định 15
+}

@@ -138,3 +138,10 @@ export class GetStructureQueryDto {
     @IsEnum(StructureContext)
     context?: StructureContext;
 }
+
+// PATCH /admin/roadmaps/:id/reorder-courses
+export class ReorderCoursesReqDto {
+    @IsNotEmpty()
+    @IsArray()
+    course_orders!: Array<{ course_id: string; order: number }>;
+}

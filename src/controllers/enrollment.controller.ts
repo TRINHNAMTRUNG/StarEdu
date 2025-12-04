@@ -57,6 +57,23 @@ class EnrollmentController {
             ResponseFormat.successResponse(response, "Lấy chi tiết enrollment thành công", 200, req.requestId)
         );
     });
+
+    /**
+     * GET /student/enrollments/:id/courses
+     * Lấy danh sách courses với completion percentage
+     */
+    getEnrollmentCourses = asyncHandler(async (req: Request, res: Response) => {
+        if (!req.user) {
+            throw AppError.unauthorizedError("Chưa xác thực");
+        }
+
+        const { id } = req.params;
+        const result = await this.enrollmentService.getEnrollmentCoursesWithProgress(id, req.user.id);
+
+        return res.status(200).json(
+            ResponseFormat.successResponse(result, "Lấy danh sách courses thành công", 200, req.requestId)
+        );
+    });
 }
 
 export default EnrollmentController;

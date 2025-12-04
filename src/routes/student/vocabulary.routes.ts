@@ -2,10 +2,10 @@ import { Router } from "express";
 import { container } from "tsyringe";
 import StudentVocabularyController from "../../controllers/student-vocabulary.controller";
 import PronunciationController from "../../controllers/pronunciation.controller";
-import { validationParams } from "../../middlewares/validationError.middleware";
+import { validationParams, validationBody } from "../../middlewares/validationError.middleware";
 import { authenticateToken, authorizeRoles, optionalAuth } from "../../middlewares/auth.middleware";
 import multer from "multer";
-import { SetIdParamDto } from "../../dtos/request/vocabulary.request.dto";
+import { SetIdParamDto, GenerateVocabularySetDto } from "../../dtos/request/vocabulary.request.dto";
 import { UserRole } from "../../models/user.model";
 const studentVocabularyRoutes = Router();
 const studentVocabularyController = container.resolve(StudentVocabularyController);
@@ -57,6 +57,43 @@ studentVocabularyRoutes.post(
     authenticateToken,
     authorizeRoles(UserRole.STUDENT),
     pronunciationController.evaluateWriting
+);
+
+// ===== STUDENT CUSTOM VOCABULARY SETS =====
+
+// POST /student/vocabulary/generate - Tạo set từ vựng bằng AI theo chủ đề
+studentVocabularyRoutes.post(
+    "/generate",
+    authenticateToken,
+    authorizeRoles(UserRole.STUDENT),
+    validationBody(GenerateVocabularySetDto),
+    studentVocabularyController.generateVocabularySet
+);
+
+// GET /student/vocabulary/my-sets - Lấy tất cả set từ vựng cá nhân
+studentVocabularyRoutes.get(
+    "/my-sets",
+    authenticateToken,
+    authorizeRoles(UserRole.STUDENT),
+    studentVocabularyController.getMyCustomSets
+);
+
+// GET /student/vocabulary/my-sets/:setId - Lấy chi tiết set từ vựng cá nhân
+studentVocabularyRoutes.get(
+    "/my-sets/:setId",
+    authenticateToken,
+    authorizeRoles(UserRole.STUDENT),
+    validationParams(SetIdParamDto),
+    studentVocabularyController.getMyCustomSetById
+);
+
+// DELETE /student/vocabulary/my-sets/:setId - Xóa set từ vựng cá nhân
+studentVocabularyRoutes.delete(
+    "/my-sets/:setId",
+    authenticateToken,
+    authorizeRoles(UserRole.STUDENT),
+    validationParams(SetIdParamDto),
+    studentVocabularyController.deleteMyCustomSet
 );
 
 export default studentVocabularyRoutes;

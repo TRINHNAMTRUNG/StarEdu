@@ -22,4 +22,11 @@ studentEnrollmentRoutes.get(
     enrollmentController.getEnrollmentById
 );
 
+// GET /student/enrollments/:id/courses - Lấy courses với completion percentage
+studentEnrollmentRoutes.get(
+    "/:id/courses",
+    validationParams(EnrollmentIdParamDto),
+    enrollmentController.getEnrollmentCourses
+);
+
 export default studentEnrollmentRoutes;

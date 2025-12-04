@@ -1,11 +1,16 @@
 import { injectable } from "tsyringe";
 import VocabularySetModel from "../models/vocabulary.model";
+import StudentVocabularySetModel from "../models/student-vocabulary.model";
 import EnrollmentModel from "../models/enrollment.model";
 import AppError from "../utils/AppError";
+import GeminiService from "./gemini.service";
+import { getAzureTTS } from "./azure.service";
 
 @injectable()
 class StudentVocabularyService {
     private readonly FREE_SET_LIMIT = 2;
+
+    constructor(private geminiService: GeminiService) {}
 
     // Helper method to check if student has purchased any course
     private hasPurchasedAnyCourse = async (studentId: string): Promise<boolean> => {
@@ -127,6 +132,205 @@ class StudentVocabularyService {
                 audioUK_url: card.audioUK_url
             }))
         };
+    };
+
+    /**
+     * Tạo set từ vựng mới bằng AI theo chủ đề (cho student)
+     */
+    generateVocabularySetByTopic = async (userId: string, topic: string, count: number = 15) => {
+        const trimmedTopic = topic.trim();
+
+        if (!trimmedTopic) {
+            throw AppError.badRequestError("Chủ đề không được để trống");
+        }
+
+        if (count < 5 || count > 30) {
+            throw AppError.badRequestError("Số lượng từ phải từ 5 đến 30");
+        }
+
+        // Bước 1: Gọi AI để tạo danh sách từ vựng theo chủ đề
+        const prompt = `
+Bạn là một chuyên gia tiếng Anh. Hãy tạo một danh sách ${count} từ vựng tiếng Anh liên quan đến chủ đề: "${trimmedTopic}".
+
+Yêu cầu:
+1. Các từ phải phổ biến, thực tế và hữu ích
+2. Mỗi từ kèm nghĩa tiếng Việt chính xác
+3. Đa dạng loại từ (danh từ, động từ, tính từ...)
+4. Phù hợp với trình độ B1-B2
+
+Trả về JSON với format:
+{
+  "title": "Từ vựng về [chủ đề]",
+  "description": "Mô tả ngắn gọn về bộ từ vựng này",
+  "words": [
+    {
+      "term": "từ tiếng Anh",
+      "mainMeaning": "nghĩa tiếng Việt"
+    }
+  ]
+}
+        `.trim();
+
+        try {
+            const response = await this.geminiService["ai"].models.generateContent({
+                model: "gemini-2.0-flash-exp",
+                contents: prompt,
+                config: {
+                    responseMimeType: "application/json",
+                    temperature: 0.7,
+                },
+            });
+
+            const jsonString = response.text?.trim();
+            if (!jsonString) {
+                throw AppError.internalServerError("AI không trả về dữ liệu");
+            }
+
+            const aiData = JSON.parse(jsonString) as {
+                title: string;
+                description: string;
+                words: Array<{ term: string; mainMeaning: string }>;
+            };
+
+            if (!aiData.words || aiData.words.length === 0) {
+                throw AppError.internalServerError("AI không tạo được từ vựng");
+            }
+
+            // Bước 2: Lấy chi tiết cho từng từ (IPA, collocations, examples)
+            console.log(`Generating details for ${aiData.words.length} words...`);
+            const detailsResults = await this.geminiService.getGeminiContentBatch(aiData.words);
+
+            // Bước 3: Tạo audio cho từng từ
+            console.log("Generating audio files...");
+            const cardsWithAudio = await Promise.all(
+                detailsResults.map(async (result) => {
+                    const word = aiData.words.find((w) => w.term === result.term);
+                    if (!word) return null;
+
+                    // Tạo audio US và UK
+                    const [audioUS, audioUK] = await Promise.all([
+                        getAzureTTS(result.term, "en-US"),
+                        getAzureTTS(result.term, "en-GB"),
+                    ]);
+
+                    return {
+                        term: result.term,
+                        mainMeaning: word.mainMeaning,
+                        ipa: result.data.ipa,
+                        collocations: result.data.collocations,
+                        example: result.data.examples[0] || "",
+                        audioUS_url: audioUS || "",
+                        audioUK_url: audioUK || "",
+                    };
+                })
+            );
+
+            const validCards = cardsWithAudio.filter((card) => card !== null);
+
+            if (validCards.length === 0) {
+                throw AppError.internalServerError("Không thể tạo flashcard");
+            }
+
+            // Bước 4: Lưu vào database
+            const newSet = await StudentVocabularySetModel.create({
+                user_id: userId,
+                title: aiData.title || `Từ vựng về ${trimmedTopic}`,
+                description: aiData.description || `Bộ từ vựng được tạo tự động về chủ đề: ${trimmedTopic}`,
+                topic: trimmedTopic,
+                cards: validCards,
+                is_ai_generated: true,
+            });
+
+            return {
+                _id: newSet._id.toString(),
+                title: newSet.title,
+                description: newSet.description,
+                topic: newSet.topic,
+                total_cards: newSet.cards.length,
+                cards: newSet.cards.map((card: any) => ({
+                    _id: card._id.toString(),
+                    term: card.term,
+                    mainMeaning: card.mainMeaning,
+                    ipa: card.ipa,
+                    collocations: card.collocations || [],
+                    example: card.example,
+                    audioUS_url: card.audioUS_url,
+                    audioUK_url: card.audioUK_url,
+                })),
+                createdAt: newSet.createdAt,
+            };
+        } catch (error: any) {
+            if (error instanceof AppError) throw error;
+            console.error("Generate vocabulary set error:", error);
+            throw AppError.internalServerError("Lỗi khi tạo set từ vựng", error?.message);
+        }
+    };
+
+    /**
+     * Lấy tất cả set từ vựng cá nhân của student
+     */
+    getMyCustomVocabularySets = async (userId: string) => {
+        const sets = await StudentVocabularySetModel.find({ user_id: userId })
+            .select("_id title description topic cards createdAt")
+            .sort({ createdAt: -1 })
+            .lean();
+
+        return sets.map((set) => ({
+            _id: set._id.toString(),
+            title: set.title,
+            description: set.description,
+            topic: set.topic,
+            total_cards: set.cards.length,
+            createdAt: set.createdAt,
+        }));
+    };
+
+    /**
+     * Lấy chi tiết 1 set từ vựng cá nhân
+     */
+    getMyCustomVocabularySetById = async (userId: string, setId: string) => {
+        const set = await StudentVocabularySetModel.findOne({
+            _id: setId,
+            user_id: userId,
+        }).lean();
+
+        if (!set) {
+            throw AppError.notFoundError("Không tìm thấy set từ vựng");
+        }
+
+        return {
+            _id: set._id.toString(),
+            title: set.title,
+            description: set.description,
+            topic: set.topic,
+            cards: set.cards.map((card: any) => ({
+                _id: card._id.toString(),
+                term: card.term,
+                mainMeaning: card.mainMeaning,
+                example: card.example,
+                ipa: card.ipa,
+                collocations: card.collocations || [],
+                audioUS_url: card.audioUS_url,
+                audioUK_url: card.audioUK_url,
+            })),
+            createdAt: set.createdAt,
+        };
+    };
+
+    /**
+     * Xóa set từ vựng cá nhân
+     */
+    deleteMyCustomVocabularySet = async (userId: string, setId: string) => {
+        const set = await StudentVocabularySetModel.findOneAndDelete({
+            _id: setId,
+            user_id: userId,
+        });
+
+        if (!set) {
+            throw AppError.notFoundError("Không tìm thấy set từ vựng");
+        }
+
+        return { message: "Đã xóa set từ vựng thành công" };
     };
 }
 

@@ -271,6 +271,18 @@ class CourseController {
         );
     });
 
+    // PATCH /admin/lessons/:id/reorder-sections
+    reorderSectionsInLesson = asyncHandler(async (req: Request, res: Response) => {
+        const { id } = req.params;
+        const { section_orders } = req.body;
+        
+        const result = await this.courseService.reorderSectionsInLesson(id, section_orders);
+
+        return res.status(200).json(
+            ResponseFormat.successResponse(result, "Đã cập nhật thứ tự sections", 200, req.requestId)
+        );
+    });
+
 }
 
 export default CourseController;

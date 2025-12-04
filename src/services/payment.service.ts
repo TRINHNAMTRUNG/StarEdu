@@ -28,6 +28,7 @@ class PaymentService {
             thumbnail?: string;
             is_published: boolean;
             discount_price?: number;
+            discount_percentage?: number;
             price: number;
         }>();
 
@@ -48,7 +49,8 @@ class PaymentService {
             throw AppError.conflictError("Bạn đã đăng ký roadmap này rồi");
         }
 
-        const amount = roadmap.discount_price || roadmap.price;
+        // Calculate final amount with discount applied
+        const amount = roadmap.discount_price || (roadmap.price * (1 - (roadmap.discount_percentage || 0) / 100));
         const orderId = `${gateway.toUpperCase()}_${Date.now()}`;
 
         const payment = await PaymentModel.create({
@@ -61,6 +63,8 @@ class PaymentService {
         });
 
         let paymentUrl: string;
+
+        console.log(`🔵 Creating payment with gateway: ${gateway}`);
 
         switch (gateway) {
             case PaymentGateway.MOMO:
@@ -75,6 +79,8 @@ class PaymentService {
             default:
                 throw AppError.badRequestError("Gateway không được hỗ trợ");
         }
+
+        console.log(`✅ Payment URL generated: ${paymentUrl}`);
 
         return {
             payment_id: payment._id.toString(),
@@ -131,6 +137,8 @@ class PaymentService {
             signature
         };
 
+        console.log("📤 Sending MoMo request:", JSON.stringify(requestBody, null, 2));
+
         try {
             const response = await axios.post(
                 "https://test-payment.momo.vn/v2/gateway/api/create",
@@ -138,14 +146,16 @@ class PaymentService {
                 { headers: { "Content-Type": "application/json" } }
             );
 
+            console.log("📥 MoMo response:", JSON.stringify(response.data, null, 2));
+
             if (response.data.resultCode !== 0) {
                 throw AppError.badRequestError(`MoMo error: ${response.data.message}`);
             }
 
             return response.data.payUrl;
         } catch (error: any) {
-            console.error("MoMo API Error:", error);
-            throw AppError.internalServerError("Lỗi kết nối MoMo", error.message);
+            console.error("❌ MoMo API Error:", error.response?.data || error.message);
+            throw AppError.internalServerError("Lỗi kết nối MoMo", error.response?.data?.message || error.message);
         }
     }
 
@@ -268,6 +278,76 @@ class PaymentService {
         );
 
         return enrollment;
+    }
+
+    /**
+     * VERIFY PAYMENT (for test environment without IPN)
+     */
+    async verifyPayment(paymentId: string, studentId: string) {
+        const payment = await PaymentModel.findById(paymentId);
+        
+        if (!payment) {
+            throw AppError.notFoundError("Payment không tồn tại");
+        }
+
+        const student = await StudentModel.findOne({ user: studentId });
+        if (!student) {
+            throw AppError.notFoundError("Student không tồn tại");
+        }
+
+        if (payment.student.toString() !== student._id.toString()) {
+            throw AppError.forbiddenError("Bạn không có quyền xác nhận payment này");
+        }
+
+        // If already success, return existing enrollment
+        if (payment.status === "success") {
+            const enrollment = await EnrollmentModel.findOne({
+                student: student._id,
+                roadmap: payment.roadmap
+            });
+
+            return {
+                payment_id: payment._id.toString(),
+                status: "success",
+                message: "Payment đã được xác nhận trước đó",
+                enrollment_id: enrollment?._id.toString()
+            };
+        }
+
+        // If pending, mark as success and create enrollment
+        if (payment.status === "pending") {
+            const session = await mongoose.startSession();
+            let enrollmentId: string | undefined;
+
+            try {
+                await session.withTransaction(async () => {
+                    payment.status = "success";
+                    payment.payment_date = new Date();
+                    await payment.save({ session });
+
+                    const enrollment = await this.createEnrollment(payment, session);
+                    enrollmentId = enrollment._id.toString();
+                });
+
+                console.log(`✅ Payment verified and enrollment created: ${enrollmentId}`);
+
+                return {
+                    payment_id: payment._id.toString(),
+                    status: "success",
+                    message: "Xác nhận thanh toán thành công",
+                    enrollment_id: enrollmentId
+                };
+            } finally {
+                session.endSession();
+            }
+        }
+
+        // If failed/cancelled
+        return {
+            payment_id: payment._id.toString(),
+            status: payment.status,
+            message: "Payment không thể xác nhận"
+        };
     }
 
     /**

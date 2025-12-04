@@ -628,6 +628,38 @@ class RoadmapService {
             }))
         };
     }
+
+    /**
+     * REORDER COURSES IN ROADMAP
+     */
+    async reorderCoursesInRoadmap(roadmapId: string, courseOrders: Array<{ course_id: string; order: number }>) {
+        const roadmap = await RoadmapModel.findById(roadmapId);
+        if (!roadmap) {
+            throw AppError.notFoundError("Roadmap không tồn tại");
+        }
+
+        // Validate all course IDs exist in roadmap
+        const courseIds = courseOrders.map(co => co.course_id);
+        const existingCourseIds = roadmap.courses.map((id: any) => id.toString());
+        
+        for (const courseId of courseIds) {
+            if (!existingCourseIds.includes(courseId)) {
+                throw AppError.badRequestError(`Course ${courseId} không thuộc roadmap này`);
+            }
+        }
+
+        // Sort by order and rebuild courses array
+        const sortedOrders = courseOrders.sort((a, b) => a.order - b.order);
+        roadmap.courses = sortedOrders.map(co => co.course_id as any);
+        
+        await roadmap.save();
+
+        return {
+            roadmap_id: roadmapId,
+            courses: roadmap.courses,
+            message: "Đã cập nhật thứ tự courses"
+        };
+    }
 }
 
 export default RoadmapService;

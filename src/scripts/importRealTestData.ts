@@ -134,6 +134,7 @@ async function importRealTestData() {
             type: sectionData.type,
             order: sectionData.order,
             video_url: sectionData.video_url || null,
+            mindmap_url: sectionData.mindmap_url || null,
             audioUrl: questions[0]?.audio || undefined,
             questions: questions,
             passingScore: 70
@@ -180,7 +181,8 @@ async function importRealTestData() {
         order: 1,
         sections: [
           { title: "Video: Hướng dẫn Part 1", type: "video", order: 1, video_url: "https://staredu-app-bucket.s3.ap-southeast-1.amazonaws.com/videos/Talk+About+the+Weather++Daily+English+Conversation++English+Speaking+%26+Listening+Practice.mp4" },
-          { title: "Exercise: 6 câu Part 1 thực tế", type: "exercise", order: 2, questionCount: 6, partNumber: 1 }
+          { title: "Mindmap: Tổng quan Part 1", type: "mindmap", order: 2, mindmap_url: "https://lh7-rt.googleusercontent.com/docsz/AD_4nXcYusuaFOjIBwV56VIILxSgHPZz3ssSjjdbhUfsEGJ-7fVHRCSYt79sjcPNNpLRd6N3vVjGVdVNNySKpKfpRyKOV60KtYs5xdi2gLKUiUDxcQhC0mB_9VfpiUVK7JH5F_6TkE__bQ?key=Mn6ZeYKJRcJWjwlHVnr2zw" },
+          { title: "Exercise: 6 câu Part 1 thực tế", type: "exercise", order: 3, questionCount: 6, partNumber: 1 }
         ]
       },
       {
@@ -189,7 +191,8 @@ async function importRealTestData() {
         order: 2,
         sections: [
           { title: "Video: Hướng dẫn Part 2", type: "video", order: 1, video_url: "https://staredu-app-bucket.s3.ap-southeast-1.amazonaws.com/videos/Talk+About+the+Weather++Daily+English+Conversation++English+Speaking+%26+Listening+Practice.mp4" },
-          { title: "Exercise: 15 câu Part 2 thực tế", type: "exercise", order: 2, questionCount: 15, partNumber: 2 }
+          { title: "Mindmap: Tổng quan Part 2", type: "mindmap", order: 2, mindmap_url: "https://lh7-rt.googleusercontent.com/docsz/AD_4nXcYusuaFOjIBwV56VIILxSgHPZz3ssSjjdbhUfsEGJ-7fVHRCSYt79sjcPNNpLRd6N3vVjGVdVNNySKpKfpRyKOV60KtYs5xdi2gLKUiUDxcQhC0mB_9VfpiUVK7JH5F_6TkE__bQ?key=Mn6ZeYKJRcJWjwlHVnr2zw" },
+          { title: "Exercise: 15 câu Part 2 thực tế", type: "exercise", order: 3, questionCount: 15, partNumber: 2 }
         ]
       },
       {
@@ -197,7 +200,8 @@ async function importRealTestData() {
         description: "Ôn tập tổng hợp",
         order: 3,
         sections: [
-          { title: "Mini Test: 25 câu thực tế", type: "quiz", order: 1, questionCount: 25, partNumber: 1 }
+          { title: "Mindmap: Ôn tập Part 1-2", type: "mindmap", order: 1, mindmap_url: "https://lh7-rt.googleusercontent.com/docsz/AD_4nXcYusuaFOjIBwV56VIILxSgHPZz3ssSjjdbhUfsEGJ-7fVHRCSYt79sjcPNNpLRd6N3vVjGVdVNNySKpKfpRyKOV60KtYs5xdi2gLKUiUDxcQhC0mB_9VfpiUVK7JH5F_6TkE__bQ?key=Mn6ZeYKJRcJWjwlHVnr2zw" },
+          { title: "Mini Test: 25 câu thực tế", type: "quiz", order: 2, questionCount: 25, partNumber: 1 }
         ]
       }
     ]);
@@ -227,7 +231,8 @@ async function importRealTestData() {
         order: 1,
         sections: [
           { title: "Video: Hướng dẫn Part 3", type: "video", order: 1, video_url: "https://staredu-app-bucket.s3.ap-southeast-1.amazonaws.com/videos/Talk+About+the+Weather++Daily+English+Conversation++English+Speaking+%26+Listening+Practice.mp4" },
-          { title: "Exercise: 20 câu Part 3 thực tế", type: "exercise", order: 2, questionCount: 20, partNumber: 3 }
+          { title: "Mindmap: Tổng quan Part 3", type: "mindmap", order: 2, mindmap_url: "https://lh7-rt.googleusercontent.com/docsz/AD_4nXcYusuaFOjIBwV56VIILxSgHPZz3ssSjjdbhUfsEGJ-7fVHRCSYt79sjcPNNpLRd6N3vVjGVdVNNySKpKfpRyKOV60KtYs5xdi2gLKUiUDxcQhC0mB_9VfpiUVK7JH5F_6TkE__bQ?key=Mn6ZeYKJRcJWjwlHVnr2zw" },
+          { title: "Exercise: 20 câu Part 3 thực tế", type: "exercise", order: 3, questionCount: 20, partNumber: 3 }
         ]
       },
       {
@@ -236,7 +241,8 @@ async function importRealTestData() {
         order: 2,
         sections: [
           { title: "Video: Hướng dẫn Part 4", type: "video", order: 1, video_url: "https://staredu-app-bucket.s3.ap-southeast-1.amazonaws.com/videos/Talk+About+the+Weather++Daily+English+Conversation++English+Speaking+%26+Listening+Practice.mp4" },
-          { title: "Exercise: 20 câu Part 4 thực tế", type: "exercise", order: 2, questionCount: 20, partNumber: 4 }
+          { title: "Mindmap: Tổng quan Part 4", type: "mindmap", order: 2, mindmap_url: "https://lh7-rt.googleusercontent.com/docsz/AD_4nXcYusuaFOjIBwV56VIILxSgHPZz3ssSjjdbhUfsEGJ-7fVHRCSYt79sjcPNNpLRd6N3vVjGVdVNNySKpKfpRyKOV60KtYs5xdi2gLKUiUDxcQhC0mB_9VfpiUVK7JH5F_6TkE__bQ?key=Mn6ZeYKJRcJWjwlHVnr2zw" },
+          { title: "Exercise: 20 câu Part 4 thực tế", type: "exercise", order: 3, questionCount: 20, partNumber: 4 }
         ]
       }
     ]);
@@ -266,7 +272,8 @@ async function importRealTestData() {
         order: 1,
         sections: [
           { title: "Video: Hướng dẫn Part 5", type: "video", order: 1, video_url: "https://staredu-app-bucket.s3.ap-southeast-1.amazonaws.com/videos/Talk+About+the+Weather++Daily+English+Conversation++English+Speaking+%26+Listening+Practice.mp4" },
-          { title: "Exercise: 30 câu Part 5 thực tế", type: "exercise", order: 2, questionCount: 30, partNumber: 5 }
+          { title: "Mindmap: Tổng quan Part 5", type: "mindmap", order: 2, mindmap_url: "https://lh7-rt.googleusercontent.com/docsz/AD_4nXcYusuaFOjIBwV56VIILxSgHPZz3ssSjjdbhUfsEGJ-7fVHRCSYt79sjcPNNpLRd6N3vVjGVdVNNySKpKfpRyKOV60KtYs5xdi2gLKUiUDxcQhC0mB_9VfpiUVK7JH5F_6TkE__bQ?key=Mn6ZeYKJRcJWjwlHVnr2zw" },
+          { title: "Exercise: 30 câu Part 5 thực tế", type: "exercise", order: 3, questionCount: 30, partNumber: 5 }
         ]
       },
       {
@@ -275,7 +282,8 @@ async function importRealTestData() {
         order: 2,
         sections: [
           { title: "Video: Hướng dẫn Part 6", type: "video", order: 1, video_url: "https://staredu-app-bucket.s3.ap-southeast-1.amazonaws.com/videos/Talk+About+the+Weather++Daily+English+Conversation++English+Speaking+%26+Listening+Practice.mp4" },
-          { title: "Exercise: 16 câu Part 6 thực tế", type: "exercise", order: 2, questionCount: 16, partNumber: 6 }
+          { title: "Mindmap: Tổng quan Part 6", type: "mindmap", order: 2, mindmap_url: "https://lh7-rt.googleusercontent.com/docsz/AD_4nXcYusuaFOjIBwV56VIILxSgHPZz3ssSjjdbhUfsEGJ-7fVHRCSYt79sjcPNNpLRd6N3vVjGVdVNNySKpKfpRyKOV60KtYs5xdi2gLKUiUDxcQhC0mB_9VfpiUVK7JH5F_6TkE__bQ?key=Mn6ZeYKJRcJWjwlHVnr2zw" },
+          { title: "Exercise: 16 câu Part 6 thực tế", type: "exercise", order: 3, questionCount: 16, partNumber: 6 }
         ]
       }
     ]);
@@ -305,7 +313,8 @@ async function importRealTestData() {
         order: 1,
         sections: [
           { title: "Video: Hướng dẫn Part 7", type: "video", order: 1, video_url: "https://staredu-app-bucket.s3.ap-southeast-1.amazonaws.com/videos/Talk+About+the+Weather++Daily+English+Conversation++English+Speaking+%26+Listening+Practice.mp4" },
-          { title: "Exercise: 40 câu Part 7 thực tế", type: "exercise", order: 2, questionCount: 40, partNumber: 7 }
+          { title: "Mindmap: Tổng quan Part 7", type: "mindmap", order: 2, mindmap_url: "https://lh7-rt.googleusercontent.com/docsz/AD_4nXcYusuaFOjIBwV56VIILxSgHPZz3ssSjjdbhUfsEGJ-7fVHRCSYt79sjcPNNpLRd6N3vVjGVdVNNySKpKfpRyKOV60KtYs5xdi2gLKUiUDxcQhC0mB_9VfpiUVK7JH5F_6TkE__bQ?key=Mn6ZeYKJRcJWjwlHVnr2zw" },
+          { title: "Exercise: 40 câu Part 7 thực tế", type: "exercise", order: 3, questionCount: 40, partNumber: 7 }
         ]
       }
     ]);

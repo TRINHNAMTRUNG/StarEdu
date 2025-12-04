@@ -72,20 +72,18 @@ class SectionService {
 		let video_url: string | undefined;
 		let mindmap_url: string | undefined;
 
-		// Video bắt buộc
-		if (!files?.video) {
-			throw AppError.badRequestError("Video là trường bắt buộc");
-		}
+		// Upload video nếu có file
+		if (files?.video) {
+			// Validate định dạng video
+			const validVideoTypes = [".mp4", ".mov", ".avi"];
+			if (!s3Util.validateFileType(files.video.originalname, validVideoTypes)) {
+				throw AppError.badRequestError("Video phải là định dạng MP4, MOV hoặc AVI");
+			}
 
-		// Validate định dạng video
-		const validVideoTypes = [".mp4", ".mov", ".avi"];
-		if (!s3Util.validateFileType(files.video.originalname, validVideoTypes)) {
-			throw AppError.badRequestError("Video phải là định dạng MP4, MOV hoặc AVI");
+			// Upload video lên S3
+			video_url = await this.uploadMulterFileToS3(files.video, S3Folder.VIDEOS, `lesson-${dto.lesson_id}`);
+			if (video_url) uploadedS3Urls.push(video_url);
 		}
-
-		// Upload video lên S3
-		video_url = await this.uploadMulterFileToS3(files.video, S3Folder.VIDEOS, `lesson-${dto.lesson_id}`);
-		if (video_url) uploadedS3Urls.push(video_url);
 
 		// Upload mindmap nếu có
 		if (files?.mindmap) {
@@ -105,6 +103,7 @@ class SectionService {
 			sectionDoc = await SectionModel.create({
 				lesson_id: dto.lesson_id,
 				title: dto.title,
+				type: dto.type,
 				order: dto.order,
 				description: dto.description,
 				test_id: dto.test_id,
@@ -203,12 +202,16 @@ class SectionService {
 			section.mindmap_url = undefined;
 		}
 
-		// Cập nhật trường văn bản
-		if (dto.title !== undefined) section.title = dto.title;
-		if (dto.order !== undefined) section.order = dto.order;
-		if (dto.description !== undefined) section.description = dto.description;
-
-		await section.save();
+	// Cập nhật trường văn bản
+	if (dto.title !== undefined) section.title = dto.title;
+	if (dto.type !== undefined) section.type = dto.type;
+	if (dto.order !== undefined) section.order = dto.order;
+	if (dto.description !== undefined) section.description = dto.description;
+	if (dto.video_url !== undefined) section.video_url = dto.video_url;
+	if (dto.article_content !== undefined) section.article_content = dto.article_content;
+	if (dto.mindmap_url !== undefined) section.mindmap_url = dto.mindmap_url;
+	if (dto.test_id !== undefined) section.test_id = dto.test_id as any;
+	if (dto.duration_minutes !== undefined) section.duration_minutes = dto.duration_minutes;		await section.save();
 
 		return {
 			...section.toObject(),

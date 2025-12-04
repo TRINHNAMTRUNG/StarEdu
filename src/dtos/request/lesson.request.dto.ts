@@ -109,3 +109,10 @@ export class CourseIdParamDto {
     @IsMongoId()
     courseId!: string;
 }
+
+// PATCH /admin/lessons/:id/reorder-sections
+export class ReorderSectionsReqDto {
+    @IsNotEmpty()
+    @IsArray()
+    section_orders!: Array<{ section_id: string; order: number }>;
+}

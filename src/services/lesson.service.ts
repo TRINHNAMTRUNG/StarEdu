@@ -583,7 +583,6 @@ class LessonService {
         if (!lesson) throw AppError.notFoundError("Lesson không tồn tại");
 
         const sections = await SectionModel.find({ lesson_id: lessonId })
-            .select("_id title order description")
             .sort({ order: 1 })
             .lean();
 
@@ -591,7 +590,14 @@ class LessonService {
             _id: s._id.toString(),
             title: s.title,
             order: s.order,
-            description: s.description || ""
+            type: s.type,
+            description: s.description || "",
+            duration_minutes: s.duration_minutes,
+            video_url: s.video_url,
+            article_content: s.article_content,
+            mindmap_url: s.mindmap_url,
+            test_id: s.test_id ? s.test_id.toString() : undefined,
+            questions: s.questions || []
         }));
     }
 }

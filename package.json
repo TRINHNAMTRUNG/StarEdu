@@ -27,7 +27,8 @@
     "typescript": "5.4"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.911.0",
+    "@aws-sdk/client-s3": "^3.940.0",
+    "@aws-sdk/s3-request-presigner": "^3.940.0",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@google-cloud/translate": "^9.2.1",
     "@google/genai": "^1.25.0",

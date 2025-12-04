@@ -24,9 +24,11 @@ const SectionSchema = new Schema({
     mindmap_url: { type: String },
     description: { type: String },
     test_id: { type: Schema.Types.ObjectId, ref: "Test" },
-    type: { type: String, enum: ['video', 'audio', 'mindmap', 'quiz', 'exercise', 'article'], default: 'video' },
+    type: { type: String, enum: ['video', 'audio', 'mindmap', 'quiz', 'exercise', 'article', 'document'], default: 'video' },
     audioUrl: { type: String },
-    articleContent: { type: String },
+    articleContent: { type: String }, // deprecated, use article_content
+    article_content: { type: String }, // new field name
+    duration_minutes: { type: Number },
     questions: [QuestionSchema],
     passingScore: { type: Number, default: 70 }
 }, { timestamps: true, collection: "sections" });

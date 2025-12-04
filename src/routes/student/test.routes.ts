@@ -23,25 +23,6 @@ router.use(authenticateToken);
 router.get("/", controller.getAllTests);
 
 /**
- * @route GET /api/student/tests/:id
- * @desc Lấy thông tin chi tiết đề thi
- */
-router.get("/:id", controller.getTestById);
-
-/**
- * @route GET /api/student/tests/:id/questions
- * @desc Lấy đề thi kèm câu hỏi (để làm bài)
- * @query part - Lấy theo part cụ thể (optional)
- */
-router.get("/:id/questions", controller.getTestWithQuestions);
-
-/**
- * @route GET /api/student/tests/:id/answers
- * @desc Lấy đề thi kèm đáp án và giải thích (sau khi làm xong)
- */
-router.get("/:id/answers", controller.getTestWithAnswers);
-
-/**
  * @route POST /api/student/tests/start
  * @desc Bắt đầu làm bài thi mới hoặc tiếp tục bài làm dở
  */
@@ -72,15 +53,36 @@ router.post("/complete", validationBody(CompleteTestReqDto), controller.complete
 router.post("/abandon", controller.abandonTest);
 
 /**
+ * @route GET /api/student/tests/attempts
+ * @desc Lấy lịch sử các lượt thi của user
+ * IMPORTANT: Must be before ALL :id routes to avoid route collision
+ */
+router.get("/attempts", controller.getUserAttempts);
+
+/**
  * @route GET /api/student/tests/attempts/:id
  * @desc Lấy kết quả chi tiết của 1 lượt thi
  */
 router.get("/attempts/:id", controller.getAttemptResult);
 
 /**
- * @route GET /api/student/tests/attempts
- * @desc Lấy lịch sử các lượt thi của user
+ * @route GET /api/student/tests/:id
+ * @desc Lấy thông tin chi tiết đề thi
+ * IMPORTANT: Must be AFTER all specific routes like /attempts
  */
-router.get("/attempts", controller.getUserAttempts);
+router.get("/:id", controller.getTestById);
+
+/**
+ * @route GET /api/student/tests/:id/questions
+ * @desc Lấy đề thi kèm câu hỏi (để làm bài)
+ * @query part - Lấy theo part cụ thể (optional)
+ */
+router.get("/:id/questions", controller.getTestWithQuestions);
+
+/**
+ * @route GET /api/student/tests/:id/answers
+ * @desc Lấy đề thi kèm đáp án và giải thích (sau khi làm xong)
+ */
+router.get("/:id/answers", controller.getTestWithAnswers);
 
 export default router;

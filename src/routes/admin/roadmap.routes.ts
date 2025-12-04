@@ -11,7 +11,8 @@ import {
     RoadmapIdParamDto,
     RoadmapCourseParamDto,
     SmartPublishRoadmapReqDto,
-    ToggleFreeRoadmapReqDto
+    ToggleFreeRoadmapReqDto,
+    ReorderCoursesReqDto
 } from "../../dtos/request/roadmap.request.dto";
 import multer from "multer";
 import { CreateCourseReqDto } from "../../dtos/request/course.request.dto";
@@ -127,6 +128,19 @@ adminRoadmapRoutes.patch(
     validationParams(RoadmapIdParamDto),
     validationBody(ToggleFreeRoadmapReqDto),
     roadmapController.toggleFreeRoadmap
+);
+
+// ============================================
+// REORDER COURSES
+// ============================================
+
+// 13. PATCH /admin/roadmaps/:id/reorder-courses
+// Mục đích: Thay đổi thứ tự courses trong roadmap
+adminRoadmapRoutes.patch(
+    "/:id/reorder-courses",
+    validationParams(RoadmapIdParamDto),
+    validationBody(ReorderCoursesReqDto),
+    roadmapController.reorderCoursesInRoadmap
 );
 
 export default adminRoadmapRoutes;

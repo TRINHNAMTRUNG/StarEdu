@@ -1,4 +1,11 @@
-import { IsMongoId, IsNotEmpty, IsNumber, IsOptional, IsString, Length, Min, IsBoolean } from "class-validator";
+import { IsMongoId, IsNotEmpty, IsNumber, IsOptional, IsString, Length, Min, IsBoolean, IsEnum } from "class-validator";
+
+enum SectionType {
+    VIDEO = 'video',
+    DOCUMENT = 'document',
+    MINDMAP = 'mindmap',
+    EXERCISE = 'exercise'
+}
 
 export class CreateSectionReqDto {
     @IsNotEmpty()
@@ -9,6 +16,10 @@ export class CreateSectionReqDto {
     @IsString()
     @Length(1, 200)
     title!: string;
+
+    @IsNotEmpty()
+    @IsEnum(SectionType)
+    type!: 'video' | 'document' | 'mindmap' | 'exercise';
 
     @IsNotEmpty()
     @IsNumber()
@@ -33,6 +44,10 @@ export class UpdateSectionReqDto {
     title?: string;
 
     @IsOptional()
+    @IsEnum(SectionType)
+    type?: 'video' | 'document' | 'mindmap' | 'exercise';
+
+    @IsOptional()
     @IsNumber()
     @Min(0)
     order?: number;
@@ -40,6 +55,26 @@ export class UpdateSectionReqDto {
     @IsOptional()
     @IsString()
     description?: string;
+
+    @IsOptional()
+    @IsString()
+    video_url?: string;
+
+    @IsOptional()
+    @IsString()
+    article_content?: string;
+
+    @IsOptional()
+    @IsString()
+    mindmap_url?: string;
+
+    @IsOptional()
+    @IsMongoId()
+    test_id?: string;
+
+    @IsOptional()
+    @IsNumber()
+    duration_minutes?: number;
 
     // Flags to remove existing files
     @IsOptional()

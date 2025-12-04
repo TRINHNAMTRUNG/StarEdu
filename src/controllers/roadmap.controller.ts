@@ -210,6 +210,20 @@ class RoadmapController {
             ResponseFormat.successResponse(response, "Cập nhật free roadmap thành công", 200, req.requestId)
         );
     });
+
+    /**
+     * REORDER COURSES IN ROADMAP
+     */
+    reorderCoursesInRoadmap = asyncHandler(async (req: Request, res: Response) => {
+        const { id } = req.params;
+        const { course_orders } = req.body;
+
+        const result = await this.roadmapService.reorderCoursesInRoadmap(id, course_orders);
+
+        return res.status(200).json(
+            ResponseFormat.successResponse(result, "Đã cập nhật thứ tự courses", 200, req.requestId)
+        );
+    });
 }
 
 export default RoadmapController;

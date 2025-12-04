@@ -1000,6 +1000,49 @@ class CourseService {
             is_free: !!l.is_free
         }));
     }
+
+    /**
+     * REORDER SECTIONS IN LESSON
+     */
+    async reorderSectionsInLesson(lessonId: string, sectionOrders: Array<{ section_id: string; order: number }>) {
+        const lesson = await LessonModel.findById(lessonId);
+        if (!lesson) {
+            throw AppError.notFoundError("Lesson không tồn tại");
+        }
+
+        // Validate all section IDs exist in lesson
+        const sectionIds = sectionOrders.map(so => so.section_id);
+        const existingSections = await SectionModel.find({
+            _id: { $in: sectionIds },
+            lesson_id: lessonId
+        });
+
+        if (existingSections.length !== sectionIds.length) {
+            throw AppError.badRequestError("Một số section không thuộc lesson này");
+        }
+
+        // Update order for each section
+        await Promise.all(
+            sectionOrders.map(so =>
+                SectionModel.findByIdAndUpdate(so.section_id, { order: so.order })
+            )
+        );
+
+        // Return updated sections
+        const updatedSections = await SectionModel.find({ lesson_id: lessonId })
+            .sort({ order: 1 })
+            .lean();
+
+        return {
+            lesson_id: lessonId,
+            sections: updatedSections.map(s => ({
+                _id: s._id.toString(),
+                title: s.title,
+                order: s.order
+            })),
+            message: "Đã cập nhật thứ tự sections"
+        };
+    }
 }
 
 export default CourseService;

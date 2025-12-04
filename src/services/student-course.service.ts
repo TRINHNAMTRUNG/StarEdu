@@ -3,6 +3,8 @@ import CourseModel from "../models/course.model";
 import LessonModel from "../models/lesson.model";
 import SectionModel from "../models/section.model";
 import EnrollmentModel from "../models/enrollment.model";
+import SectionProgressModel from "../models/sectionProgress.model";
+import StudentModel from "../models/student.model";
 import AppError from "../utils/AppError";
 import mongoose from "mongoose";
 
@@ -161,6 +163,8 @@ class StudentCourseService {
 
     // API #4: Lay lessons va sections cua course
     getCourseLessonsWithSections = async (courseId: string, studentId?: string) => {
+        console.log('🔍 [getCourseLessonsWithSections] courseId:', courseId, 'studentId:', studentId);
+        
         // Kiem tra course co ton tai va published
         const course = await CourseModel.findById(courseId).lean();
         if (!course) {
@@ -172,58 +176,148 @@ class StudentCourseService {
 
         // Kiem tra student co enrolled khong (neu co studentId)
         let isEnrolled = false;
+        let studentObjId: mongoose.Types.ObjectId | null = null;
+        
         if (studentId) {
+            // Lấy student object id từ user id
+            const student = await StudentModel.findOne({ user: studentId }).lean();
+            console.log('👤 [getCourseLessonsWithSections] Student found:', student?._id);
+            
+            if (student) {
+                studentObjId = student._id as mongoose.Types.ObjectId;
+            }
+            
             const enrollmentCount = await EnrollmentModel.countDocuments({
-                student: studentId,
+                student: studentObjId,
                 roadmap: { $exists: true }
             });
+            console.log('📊 [getCourseLessonsWithSections] Enrollment count:', enrollmentCount);
 
             if (enrollmentCount > 0) {
                 const enrollments = await EnrollmentModel.find({
-                    student: studentId
+                    student: studentObjId
                 }).populate("roadmap").lean();
+                
+                console.log('📝 [getCourseLessonsWithSections] Enrollments:', enrollments.length);
 
                 for (const enrollment of enrollments) {
                     const roadmap = enrollment.roadmap as any;
                     if (roadmap && roadmap.courses) {
                         const courseIds = roadmap.courses.map((id: any) => id.toString());
+                        console.log('🗺️ [getCourseLessonsWithSections] Roadmap:', roadmap.title, 'Courses:', courseIds);
+                        
                         if (courseIds.includes(courseId)) {
                             isEnrolled = true;
+                            console.log('✅ [getCourseLessonsWithSections] ENROLLED! Course found in roadmap');
                             break;
                         }
                     }
                 }
             }
         }
+        
+        console.log('🎯 [getCourseLessonsWithSections] Final isEnrolled:', isEnrolled);
 
         // Lay lessons va sections
         const lessons: any[] = await LessonModel.find({ course_id: courseId })
             .sort({ order: 1 })
             .lean();
 
+        // Lấy tiến độ làm bài của student cho course này
+        let sectionProgressMap: Map<string, any> = new Map();
+        if (isEnrolled && studentObjId) {
+            const progresses = await SectionProgressModel.find({
+                student: studentObjId,
+                course_id: courseId
+            }).lean();
+            
+            progresses.forEach(p => {
+                sectionProgressMap.set(p.section_id.toString(), p);
+            });
+        }
+
+        // Helper: Kiểm tra chương trước đã hoàn thành bài tập >= 70% chưa
+        const checkPreviousLessonCompleted = async (lessonIndex: number): Promise<boolean> => {
+            if (lessonIndex === 0) return true; // Chương đầu tiên luôn mở
+            
+            const previousLesson = lessons[lessonIndex - 1];
+            const previousSections = await SectionModel.find({ lesson_id: previousLesson._id }).lean();
+            
+            // Tìm section exercise/quiz của chương trước
+            const exerciseSections = previousSections.filter(s => 
+                s.type === "exercise" || s.type === "quiz"
+            );
+            
+            // Nếu chương trước không có bài tập -> tự động mở khóa
+            if (exerciseSections.length === 0) return true;
+            
+            // Kiểm tra tất cả bài tập chương trước đã hoàn thành >= 70%
+            for (const exerciseSection of exerciseSections) {
+                const progress = sectionProgressMap.get(exerciseSection._id.toString());
+                if (!progress || !progress.is_completed || progress.score_percentage < 70) {
+                    return false;
+                }
+            }
+            
+            return true;
+        };
+
         const lessonsWithSections = await Promise.all(
-            lessons.map(async (lesson) => {
+            lessons.map(async (lesson, index) => {
                 const sections = await SectionModel.find({ lesson_id: lesson._id })
                     .sort({ order: 1 })
                     .lean();
 
-                // Neu chua enrolled, chi tra ve section free (is_published = true trong lesson)
-                const filteredSections = isEnrolled
-                    ? sections
-                    : lesson.is_published
-                        ? sections
-                        : sections.map(s => ({
-                            ...s,
-                            video_url: null,
-                            mindmap_url: null,
-                            test_id: null,
-                            is_locked: true
-                        }));
+                // Kiểm tra điều kiện mở khóa chương
+                let canAccessLesson = false;
+                
+                if (!isEnrolled) {
+                    // Chưa enrolled: chỉ xem được chương có is_published = true
+                    canAccessLesson = lesson.is_published;
+                } else {
+                    // Đã enrolled: kiểm tra chương trước đã hoàn thành bài tập chưa
+                    canAccessLesson = await checkPreviousLessonCompleted(index);
+                }
+
+                // Map sections với trạng thái progress
+                const filteredSections = sections.map(s => {
+                    const progress = sectionProgressMap.get(s._id.toString());
+                    return {
+                        _id: s._id,
+                        lesson_id: s.lesson_id,
+                        title: s.title,
+                        order: s.order,
+                        description: s.description,
+                        video_url: s.video_url,
+                        mindmap_url: s.mindmap_url,
+                        test_id: s.test_id,
+                        type: s.type, // ✅ Đảm bảo trả về type
+                        audioUrl: s.audioUrl,
+                        articleContent: s.articleContent,
+                        questions: s.questions,
+                        passingScore: s.passingScore,
+                        createdAt: s.createdAt,
+                        updatedAt: s.updatedAt,
+                        is_locked: !canAccessLesson,
+                        // Thêm thông tin progress nếu có
+                        progress: progress ? {
+                            is_completed: progress.is_completed,
+                            score_percentage: progress.score_percentage,
+                            attempts: progress.attempts,
+                            is_viewed: progress.is_viewed
+                        } : null
+                    };
+                });
 
                 return {
                     ...lesson,
+                    total_sections: sections.length,
                     is_free: lesson.is_published,
-                    is_locked: !isEnrolled && !lesson.is_published,
+                    is_locked: !canAccessLesson,
+                    // Thêm lý do lock nếu bị lock
+                    lock_reason: !canAccessLesson && isEnrolled 
+                        ? "Bạn cần hoàn thành bài tập chương trước với điểm >= 70% để mở khóa chương này" 
+                        : (!canAccessLesson ? "Bạn cần đăng ký khóa học để xem nội dung này" : null),
                     sections: filteredSections
                 };
             })

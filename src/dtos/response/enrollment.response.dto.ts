@@ -9,10 +9,25 @@ class EnrollmentRoadmapResDto {
     title!: string;
 
     @Expose()
+    description?: string;
+
+    @Expose()
     thumbnail?: string;
 
     @Expose()
     target_level!: string;
+
+    @Expose()
+    price!: number;
+
+    @Expose()
+    discount_percentage!: number;
+
+    @Expose()
+    total_courses!: number;
+
+    @Expose()
+    estimated_duration_weeks?: number;
 }
 
 // GET /student/enrollments/:id

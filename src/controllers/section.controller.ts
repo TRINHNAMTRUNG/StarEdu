@@ -20,12 +20,13 @@ class SectionController {
      * POST /admin/sections (with file upload)
      */
     createSection = asyncHandler(async (req: Request, res: Response) => {
-        const { lesson_id, title, order, description, test_id } = req.body;
+        const { lesson_id, title, type, order, description, test_id } = req.body;
         const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
         const dto: CreateSectionReqDto = {
             lesson_id,
             title,
+            type,
             order: Number(order),
             description,
             test_id
@@ -68,13 +69,19 @@ class SectionController {
      */
     updateSection = asyncHandler(async (req: Request, res: Response) => {
         const { id } = req.params;
-        const { title, order, description, removeVideo, removeMindmap } = req.body;
+        const { title, type, order, description, video_url, article_content, mindmap_url, test_id, duration_minutes, removeVideo, removeMindmap } = req.body;
         const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
         const dto: UpdateSectionReqDto = {
             title,
+            type,
             order: order ? Number(order) : undefined,
             description,
+            video_url,
+            article_content,
+            mindmap_url,
+            test_id,
+            duration_minutes: duration_minutes ? Number(duration_minutes) : undefined,
             removeVideo: removeVideo === "true",
             removeMindmap: removeMindmap === "true"
         };
