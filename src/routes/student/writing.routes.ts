@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { container } from "tsyringe";
 import WritingController from "../../controllers/writing.controller";
-import ImageWritingController from "../../controllers/imageWriting.controller";
 import { validationBody } from "../../middlewares/validationError.middleware";
 import { authenticateToken } from "../../middlewares/auth.middleware";
 import {
@@ -16,7 +15,6 @@ import {
 
 const writingRoutes = Router();
 const writingController = container.resolve(WritingController);
-const imageWritingController = container.resolve(ImageWritingController);
 
 /**
  * ============================================
@@ -151,40 +149,6 @@ writingRoutes.post(
     writingController.checkEmailWriting
 );
 
-/**
- * ============================================
- * IMAGE WRITING QUESTION APIs (NEW)
- * ============================================
- */
 
-/**
- * GET /api/student/writing/image-writing/get-question
- * Lấy đề bài ngẫu nhiên từ database
- * Query params: ?difficulty=medium&category=activities
- * 
- * Response:
- * {
- *   "question_id": "123",
- *   "image_url": "https://...",
- *   "image_description": "A person walking...",
- *   "required_words": ["walk", "street"],
- *   "difficulty": "medium",
- *   "category": "activities",
- *   "hint": "Describe what the person is doing"
- * }
- */
-writingRoutes.get(
-    "/image-writing/get-question",
-    imageWritingController.getRandomQuestion
-);
-
-/**
- * GET /api/student/writing/image-writing/get-question/:id
- * Lấy đề bài theo ID (để làm lại bài cũ)
- */
-writingRoutes.get(
-    "/image-writing/get-question/:id",
-    imageWritingController.getQuestionById
-);
 
 export default writingRoutes;
