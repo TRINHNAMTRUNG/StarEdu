@@ -74,9 +74,16 @@ const validateCore = (DTOClass: new () => any, validatorType: ValidatorType) => 
                 );
             }
 
-            // Chỉ gán lại DTO cho BODY (vì query và params là read-only)
+            // GÁN DTO ĐÃ ĐƯỢC VALIDATE:
+            // - BODY: thay thế req.body (backward-compatible)
+            // - QUERY: attach (req as any).validatedQuery để controller dùng giá trị đã convert/typed
+            // - PARAMS: attach (req as any).validatedParams để controller dùng giá trị đã convert/typed
             if (validatorType === ValidatorType.BODY) {
                 req.body = instanceDTO;
+            } else if (validatorType === ValidatorType.QUERY) {
+                (req as any).validatedQuery = instanceDTO;
+            } else if (validatorType === ValidatorType.PARAMS) {
+                (req as any).validatedParams = instanceDTO;
             }
 
             next();

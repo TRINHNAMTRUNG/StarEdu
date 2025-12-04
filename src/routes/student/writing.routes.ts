@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { container } from "tsyringe";
 import WritingController from "../../controllers/writing.controller";
-import { validationBody } from "../../middlewares/validationError.middleware";
+import { validationBody, validationQuery } from "../../middlewares/validationError.middleware";
 import { authenticateToken } from "../../middlewares/auth.middleware";
 import {
     SuggestTextCollocationsReqDto,
@@ -12,6 +12,8 @@ import {
     SuggestEmailKeywordsReqDto,
     CheckEmailWritingReqDto
 } from "../../dtos/request/writing.request.dto";
+import { GetRandomPromptReqDto } from "../../dtos/request/writing.request.dto";
+import AdminWritingService from "../../services/admin-writing.service";
 
 const writingRoutes = Router();
 const writingController = container.resolve(WritingController);
@@ -149,6 +151,48 @@ writingRoutes.post(
     writingController.checkEmailWriting
 );
 
+// NEW: GET random prompt for text writing
+writingRoutes.get(
+    "/text-writing/random",
+    validationQuery(GetRandomPromptReqDto),
+    async (req, res, next) => {
+        try {
+            const q = (req as any).validatedQuery as GetRandomPromptReqDto | undefined;
+            const adminService = container.resolve(AdminWritingService);
+            const prompt = await adminService.getRandomPrompt("text" as any);
+            return res.status(200).json({
+                success: true,
+                message: "Lấy đề text ngẫu nhiên thành công",
+                code: 200,
+                requestId: req.requestId,
+                data: prompt
+            });
+        } catch (err) {
+            next(err);
+        }
+    }
+);
 
+// NEW: GET random prompt for image writing
+writingRoutes.get(
+    "/image-writing/random",
+    validationQuery(GetRandomPromptReqDto),
+    async (req, res, next) => {
+        try {
+            const q = (req as any).validatedQuery as GetRandomPromptReqDto | undefined;
+            const adminService = container.resolve(AdminWritingService);
+            const prompt = await adminService.getRandomPrompt("image" as any);
+            return res.status(200).json({
+                success: true,
+                message: "Lấy đề image ngẫu nhiên thành công",
+                code: 200,
+                requestId: req.requestId,
+                data: prompt
+            });
+        } catch (err) {
+            next(err);
+        }
+    }
+);
 
 export default writingRoutes;
