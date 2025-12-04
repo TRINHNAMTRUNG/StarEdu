@@ -231,3 +231,69 @@ export class CheckEmailWritingResDto {
     @Expose()
     conclusion!: string; // Kết luận + khuyến khích
 }
+
+/**
+ * ============================================
+ * WRITING PROMPTS RESPONSES  
+ * ============================================
+ */
+
+// GET text writing prompts
+export class TextPromptResDto {
+    @Expose()
+    _id!: string;
+
+    @Expose()
+    required_words!: string[]; // ["accept", "so"]
+
+    @Expose()
+    instruction!: string; // "Write a sentence using both words"
+
+    @Expose()
+    difficulty!: string;
+
+    @Expose()
+    expected_length!: number;
+}
+
+export class GetTextPromptsResDto {
+    @Expose()
+    @Type(() => TextPromptResDto)
+    prompts!: TextPromptResDto[];
+
+    @Expose()
+    total_available!: number; // Tổng đề có trong DB
+}
+
+// GET image writing prompts
+export class ImagePromptResDto {
+    @Expose()
+    _id!: string;
+
+    @Expose()
+    required_words!: string[];
+
+    @Expose()
+    instruction!: string;
+
+    @Expose()
+    image_url!: string;
+
+    @Expose()
+    image_description?: string;
+
+    @Expose()
+    difficulty!: string;
+
+    @Expose()
+    expected_length!: number;
+}
+
+export class GetImagePromptsResDto {
+    @Expose()
+    @Type(() => ImagePromptResDto)
+    prompts!: ImagePromptResDto[];
+
+    @Expose()
+    total_available!: number;
+}

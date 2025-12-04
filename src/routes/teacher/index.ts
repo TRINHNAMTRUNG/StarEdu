@@ -4,10 +4,10 @@ import { Router } from "express";
 // import teacherCourseRoutes from "./course.routes";
 // import teacherDashboardRoutes from "./dashboard.routes";
 
-const teacherRouter = Router();
+// const teacherRouter = Router();
 
 // teacherRouter.use("/auth", teacherAuthRoutes);
 // teacherRouter.use("/courses", teacherCourseRoutes);
 // teacherRouter.use("/dashboard", teacherDashboardRoutes);
 
-export default teacherRouter;
+// export default teacherRouter;

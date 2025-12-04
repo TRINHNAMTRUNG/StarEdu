@@ -9,6 +9,7 @@ import studentPaymentRoutes from "./payment.routes"; // ✅ THÊM
 import studentEnrollmentRoutes from "./enrollment.routes"; // ✅ THÊM
 import sectionProgressRoutes from "./section-progress.routes"; // ✅ THÊM - Section Progress
 import vocabularyProgressRoutes from "./vocabulary-progress.routes"; // ✅ THÊM - Vocabulary Progress
+import writingRoutes from "./writing.routes"; // ✅ THÊM
 const studentRouter = Router();
 
 studentRouter.use("/auth", studentAuthRoutes);
@@ -21,5 +22,6 @@ studentRouter.use("/dictations", studentDictationRoutes);
 studentRouter.use("/payments", studentPaymentRoutes); // ✅ THÊM
 studentRouter.use("/enrollments", studentEnrollmentRoutes); // ✅ THÊM
 studentRouter.use(sectionProgressRoutes); // ✅ THÊM - Section Progress (không prefix vì đã có /sections và /courses)
+studentRouter.use("/writing", writingRoutes); // ✅ THÊM - student writing routes
 
 export default studentRouter;

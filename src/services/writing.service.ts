@@ -1,13 +1,6 @@
 import { injectable } from "tsyringe";
 import GeminiService from "./gemini.service";
-import {
-    SuggestTextCollocationsReqDto,
-    CheckTextWritingReqDto,
-    SuggestImageCollocationsReqDto,
-    CheckImageWritingReqDto,
-    SuggestEmailKeywordsReqDto,
-    CheckEmailWritingReqDto
-} from "../dtos/request/writing.request.dto";
+import { CheckEmailWritingReqDto, SuggestEmailKeywordsReqDto } from "../dtos/request/writing.request.dto";
 
 @injectable()
 class WritingService {
@@ -21,18 +14,16 @@ class WritingService {
 
     /**
      * API 1.1: Gợi ý 5 collocation cho text writing
-     * Dựa vào 2 từ cho trước
+     * Thay đổi: nhận trực tiếp requiredWords thay vì DTO
      */
-    async suggestTextCollocations(dto: SuggestTextCollocationsReqDto) {
+    async suggestTextCollocations(requiredWords: string[], context?: string) {
         try {
-            console.log(`📝 [WritingService] Suggesting text collocations for: [${dto.required_words.join(", ")}]`);
+            console.log(`📝 [WritingService] Suggesting text collocations for: [${requiredWords.join(", ")}]`);
 
-            // Fixed context for text collocations
-            const fixedContext = "contextual_examples";
+            const fixedContext = context ?? "contextual_examples";
 
-            // Gọi GeminiService để xử lý prompt và schema
             const result = await this.geminiService.suggestTextCollocations(
-                dto.required_words,
+                requiredWords,
                 fixedContext
             );
 
@@ -47,19 +38,17 @@ class WritingService {
 
     /**
      * API 1.2: Chấm bài text writing
-     * Chấm câu dựa vào 2 từ cho trước (KHÔNG có hình ảnh)
+     * Thay đổi: nhận sentence và requiredWords trực tiếp
      */
-    async checkTextWriting(dto: CheckTextWritingReqDto) {
+    async checkTextWriting(sentence: string, requiredWords: string[], context?: string) {
         try {
-            console.log(`📝 [WritingService] Checking text writing: "${dto.sentence.substring(0, 50)}..."`);
+            console.log(`📝 [WritingService] Checking text writing: "${String(sentence).substring(0, 50)}..."`);
 
-            // Fixed context for text checking (educational, neutral, encouraging)
-            const fixedContext = "educational_neutral";
+            const fixedContext = context ?? "educational_neutral";
 
-            // Gọi GeminiService để chấm bài
             const result = await this.geminiService.checkTextWriting(
-                dto.sentence,
-                dto.required_words,
+                sentence,
+                requiredWords,
                 fixedContext
             );
 
@@ -79,20 +68,18 @@ class WritingService {
      */
 
     /**
-     * API 2.1: Gợi ý 5 collocation cho image writing
-     * Dựa vào HÌNH ẢNH + 2 từ cho trước
+     * API 2.1: Gợi ý collocation cho image writing
+     * Thay đổi: nhận imageUrl và requiredWords trực tiếp
      */
-    async suggestImageCollocations(dto: SuggestImageCollocationsReqDto) {
+    async suggestImageCollocations(imageUrl: string, requiredWords: string[], context?: string) {
         try {
-            console.log(`📝 [WritingService] Suggesting image collocations for: [${dto.required_words.join(", ")}] with image: ${dto.image_url}`);
+            console.log(`📝 [WritingService] Suggesting image collocations for: [${requiredWords.join(", ")}] with image: ${imageUrl}`);
 
-            // Fixed context for image collocations: emphasize visual relevance
-            const fixedContext = "visual_descriptive";
+            const fixedContext = context ?? "visual_descriptive";
 
-            // Gọi GeminiService với image URL
             const result = await this.geminiService.suggestImageCollocations(
-                dto.image_url,
-                dto.required_words,
+                imageUrl,
+                requiredWords,
                 fixedContext
             );
 
@@ -107,20 +94,18 @@ class WritingService {
 
     /**
      * API 2.2: Chấm bài image writing
-     * Chấm câu dựa vào HÌNH ẢNH + 2 từ cho trước
+     * Thay đổi: nhận sentence, imageUrl và requiredWords trực tiếp
      */
-    async checkImageWriting(dto: CheckImageWritingReqDto) {
+    async checkImageWriting(sentence: string, imageUrl: string, requiredWords: string[], context?: string) {
         try {
-            console.log(`📝 [WritingService] Checking image writing: "${dto.sentence.substring(0, 50)}..." with image: ${dto.image_url}`);
+            console.log(`📝 [WritingService] Checking image writing: "${String(sentence).substring(0, 50)}..." with image: ${imageUrl}`);
 
-            // Fixed context for image checking: rubric + image relevance emphasis
-            const fixedContext = "visual_rubric_relevance";
+            const fixedContext = context ?? "visual_rubric_relevance";
 
-            // Gọi GeminiService để chấm bài (có xem xét hình ảnh)
             const result = await this.geminiService.checkImageWriting(
-                dto.sentence,
-                dto.image_url,
-                dto.required_words,
+                sentence,
+                imageUrl,
+                requiredWords,
                 fixedContext
             );
 

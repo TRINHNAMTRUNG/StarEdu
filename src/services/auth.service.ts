@@ -49,7 +49,11 @@ class AuthService {
         account.pinId = smsPinId;
         await account.save();
 
-        return account.toObject();
+        // ✅ FIX: Convert _id to string
+        return {
+            ...account.toObject(),
+            _id: account._id.toString()
+        };
     }
 
     verifyAccountOtp = async (phone: string, code: string) => {
@@ -77,7 +81,13 @@ class AuthService {
         hasAccount.pinId = undefined; // Xoá pinId đã sử dụng
         const user = await hasAccount.save();
         await this.studentService.createStudentWithUserId(user._id.toString(), Level.A1, 0);
-        return { ...user.toObject(), ...generateTokens({ id: user._id.toString(), role: user.role }) };
+
+        // ✅ FIX: Convert _id to string
+        return {
+            ...user.toObject(),
+            _id: user._id.toString(),
+            ...generateTokens({ id: user._id.toString(), role: user.role })
+        };
     }
 
     login = async (phone: string, password: string, expectedRole?: UserRole) => {
@@ -105,7 +115,12 @@ class AuthService {
             expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 ngày
         });
 
-        return { ...user.toObject(), ...tokens };
+        // ✅ FIX: Convert _id to string
+        return {
+            ...user.toObject(),
+            _id: user._id.toString(),
+            ...tokens
+        };
     }
 
     logout = async (refreshToken: string) => {
@@ -247,6 +262,7 @@ class AuthService {
             modified,
             alreadyBanned: alreadyBanned.length,
             notFound: notFoundIds.length,
+            // ✅ FIX: Ensure _id is string in bannedUsers array
             bannedUsers: usersToban.map(u => ({
                 _id: u._id.toString(),
                 name: u.name,
@@ -293,6 +309,7 @@ class AuthService {
             modified,
             alreadyActive: alreadyActive.length,
             notFound: notFoundIds.length,
+            // ✅ FIX: Ensure _id is string in unbannedUsers array
             unbannedUsers: usersToUnban.map(u => ({
                 _id: u._id.toString(),
                 name: u.name,
@@ -302,7 +319,6 @@ class AuthService {
             notFoundIds
         };
     }
-
 }
 
 export default AuthService;
