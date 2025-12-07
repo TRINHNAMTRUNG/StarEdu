@@ -24,10 +24,14 @@ class PaymentController {
             throw AppError.unauthorizedError("Chưa xác thực");
         }
 
-        const { roadmap_id, gateway, redirect_url } = req.body;
+        const { roadmap_id, roadmap_ids, gateway, redirect_url } = req.body;
+        
+        console.log("📥 Payment request:", { roadmap_id, roadmap_ids, gateway });
+        
         const result = await this.paymentService.createPayment(
             req.user.id,
             roadmap_id,
+            roadmap_ids,
             gateway,
             redirect_url
         );

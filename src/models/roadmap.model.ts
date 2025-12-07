@@ -21,6 +21,7 @@ const RoadmapSchema = new Schema({
     is_free: { type: Boolean, default: false }, // ✅ THÊM MỚI
 
     total_enrollments: { type: Number, default: 0 },
+    estimated_duration_weeks: { type: Number, default: 0 }, // ✅ Thời gian ước tính hoàn thành (tuần)
     average_rating: { type: Number, default: 0 },
 
 }, { timestamps: true, collection: "roadmaps" });

@@ -15,8 +15,7 @@ const DB_URI = process.env.DB_URI || "mongodb://localhost:27017/staredu_db";
 const DB_NAME = process.env.DB_NAME || "staredu_db";
 
 /**
- * Script import REAL test data từ file ets 2020 test 1.txt
- * Load câu hỏi thật và gán vào các section exercise
+ * Script import ADVANCED 4 Skills (L&R 800+ & S&W 300+) data
  */
 
 interface TestQuestion {
@@ -24,7 +23,7 @@ interface TestQuestion {
   questions: any[];
 }
 
-async function importRealTestData() {
+async function importAdvanced4SkillsData() {
   try {
     await mongoose.connect(DB_URI, { dbName: DB_NAME });
     console.log(`✅ Connected to MongoDB - Database: ${DB_NAME}`);
@@ -61,15 +60,13 @@ async function importRealTestData() {
         if (questionIndex >= count) break;
 
         if (item.type === "single") {
-          // Single question
           const optionValues = Object.values(item.options);
           const hasEmptyOptions = optionValues.some(opt => opt === "" || opt === null);
           
           questions.push({
-            id: `q_${partNumber}_${item.number}`,
+            id: `q_4s_${partNumber}_${item.number}`,
             questionText: item.questionText || `Question ${item.number}`,
             questionType: "multiple-choice",
-            // For Part 1-2 with empty options, show the options from transcript or generate labels
             options: hasEmptyOptions 
               ? ["A", "B", "C", "D"].map(letter => item.options[letter] || letter)
               : optionValues,
@@ -82,14 +79,13 @@ async function importRealTestData() {
           });
           questionIndex++;
         } else if (item.type === "group") {
-          // Group questions
           for (const subQ of item.questions) {
             if (questionIndex >= count) break;
             
             const optionValues = Object.values(subQ.options);
             
             questions.push({
-              id: `q_${partNumber}_${subQ.number}`,
+              id: `q_4s_${partNumber}_${subQ.number}`,
               questionText: subQ.questionText,
               questionType: "multiple-choice",
               options: optionValues,
@@ -112,7 +108,6 @@ async function importRealTestData() {
     // Helper: Create lessons with real questions
     const createLessonsWithRealQuestions = async (courseId: any, lessonsData: any[]) => {
       for (const lessonData of lessonsData) {
-        // Calculate lesson duration from sections
         let lessonDuration = 0;
         for (const sectionData of lessonData.sections) {
           lessonDuration += sectionData.duration_minutes || 0;
@@ -124,14 +119,13 @@ async function importRealTestData() {
           description: lessonData.description,
           order: lessonData.order,
           duration: lessonDuration,
-          is_published: lessonData.order === 1, // Chỉ Chương 1 được publish
-          is_free: lessonData.order === 1 // Chương 1 miễn phí để preview
+          is_published: lessonData.order === 1,
+          is_free: lessonData.order === 1
         });
 
         for (const sectionData of lessonData.sections) {
           let questions: any[] = [];
           
-          // Get real questions for exercise/quiz type
           if ((sectionData.type === "exercise" || sectionData.type === "quiz") && sectionData.questionCount) {
             questions = getQuestionsByPart(sectionData.partNumber || 5, sectionData.questionCount);
           }
@@ -152,41 +146,51 @@ async function importRealTestData() {
       }
     };
 
-    console.log("\n🗑️  Deleting old data...");
-    await SectionModel.deleteMany({});
-    await LessonModel.deleteMany({});
-    await CourseModel.deleteMany({});
-    await RoadmapModel.deleteMany({});
-    console.log("✅ Old data deleted");
+    console.log("\n🗑️  Deleting old Advanced 4 Skills roadmap data...");
+    const oldAdvanced4SkillsRoadmap = await RoadmapModel.findOne({ title: /Cao Cấp 4 Kỹ Năng.*800.*300/ });
+    if (oldAdvanced4SkillsRoadmap) {
+      const oldCourseIds = oldAdvanced4SkillsRoadmap.courses;
+      
+      for (const courseId of oldCourseIds) {
+        const lessons = await LessonModel.find({ course_id: courseId });
+        for (const lesson of lessons) {
+          await SectionModel.deleteMany({ lesson_id: lesson._id });
+        }
+        await LessonModel.deleteMany({ course_id: courseId });
+      }
+      
+      await CourseModel.deleteMany({ _id: { $in: oldCourseIds } });
+      await RoadmapModel.deleteOne({ _id: oldAdvanced4SkillsRoadmap._id });
+      console.log("✅ Old advanced 4 skills data deleted");
+    } else {
+      console.log("✅ No old advanced 4 skills data to delete");
+    }
 
-    // =====================================================
-    // ROADMAP 1: Lộ Trình Cơ Bản 2 Kỹ Năng
-    // =====================================================
     console.log("\n" + "=".repeat(70));
-    console.log("🗺️  ROADMAP 1: Lộ Trình Cơ Bản 2 Kỹ Năng - Listening & Reading 450+");
+    console.log("🗺️  ROADMAP: Lộ Trình Cao Cấp 4 Kỹ Năng - 800+ & 300+");
     console.log("=".repeat(70));
 
-    const roadmap1CourseIds: mongoose.Types.ObjectId[] = [];
+    const roadmapCourseIds: mongoose.Types.ObjectId[] = [];
 
     // Course 1: TOEIC Listening Cơ Bản Part 1-2
     console.log("\n📚 Course 1: TOEIC Listening Cơ Bản Part 1-2");
-    const course1_1 = await CourseModel.create({
-      title: "TOEIC Listening Cơ Bản Part 1-2",
-      description: "Khóa học tập trung vào kỹ năng nghe Part 1 (Photographs) và Part 2 (Question-Response) với câu hỏi thật từ ETS.",
+    const course1 = await CourseModel.create({
+      title: "TOEIC Listening Cao Cấp Part 1-2",
+      description: "Khóa học chuyên sâu kỹ năng nghe Part 1-2 với độ khó cao nhất từ ETS. Phù hợp cho người mục tiêu 800+.",
       thumbnail: "https://storage.googleapis.com/prep-storage-service/course/cover/qDgMeVyQqcHeqa5oz4lHTgpW5a8fSxKmB3mwzHHK.jpg",
       skill_groups: ["listening"],
       assigned_teachers: [teacher._id],
       is_published: true,
       order: 1,
-      price: 150000,
-      original_price: 220000,
+      price: 250000,
+      original_price: 370000,
       is_free: false,
-      total_enrollments: 45,
-      average_rating: 4.7,
-      total_reviews: 12
+      total_enrollments: 26,
+      average_rating: 4.9,
+      total_reviews: 7
     });
 
-    await createLessonsWithRealQuestions(course1_1._id, [
+    await createLessonsWithRealQuestions(course1._id, [
       {
         title: "Chương 1: Part 1 - Photographs",
         description: "Luyện nghe mô tả hình ảnh với câu hỏi thật",
@@ -218,19 +222,18 @@ async function importRealTestData() {
       }
     ]);
 
-    roadmap1CourseIds.push(course1_1._id);
-    console.log(`✅ Created: ${course1_1.title}`);
+    roadmapCourseIds.push(course1._id);
+    console.log(`✅ Created: ${course1.title}`);
 
-    // Calculate total duration for course
-    const course1_1_lessons = await LessonModel.find({ course_id: course1_1._id });
-    const course1_1_duration = course1_1_lessons.reduce((sum, lesson) => sum + (lesson.duration || 0), 0);
-    await CourseModel.updateOne({ _id: course1_1._id }, { $set: { total_duration_minutes: course1_1_duration } });
-    console.log(`   ⏱️  Duration: ${course1_1_duration} minutes`);
-    console.log(`   👥 Enrollments: ${course1_1.total_enrollments} | ⭐ Rating: ${course1_1.average_rating} (${course1_1.total_reviews} reviews)`);
+    const course1_lessons = await LessonModel.find({ course_id: course1._id });
+    const course1_duration = course1_lessons.reduce((sum, lesson) => sum + (lesson.duration || 0), 0);
+    await CourseModel.updateOne({ _id: course1._id }, { $set: { total_duration_minutes: course1_duration } });
+    console.log(`   ⏱️  Duration: ${course1_duration} minutes`);
+    console.log(`   👥 Enrollments: ${course1.total_enrollments} | ⭐ Rating: ${course1.average_rating} (${course1.total_reviews} reviews)`);
 
     // Course 2: TOEIC Listening Part 3-4
-    console.log("\n📚 Course 2: TOEIC Listening Part 3-4");
-    const course1_2 = await CourseModel.create({
+    console.log("\n📚 Course 2: TOEIC Listening Nâng Cao Part 3-4");
+    const course2 = await CourseModel.create({
       title: "TOEIC Listening Nâng Cao Part 3-4",
       description: "Luyện nghe hội thoại dài và bài phát biểu với câu hỏi thật từ ETS",
       thumbnail: "https://storage.googleapis.com/prep-storage-service/course/cover/qDgMeVyQqcHeqa5oz4lHTgpW5a8fSxKmB3mwzHHK.jpg",
@@ -241,12 +244,12 @@ async function importRealTestData() {
       price: 180000,
       original_price: 260000,
       is_free: false,
-      total_enrollments: 38,
+      total_enrollments: 42,
       average_rating: 4.8,
-      total_reviews: 10
+      total_reviews: 11
     });
 
-    await createLessonsWithRealQuestions(course1_2._id, [
+    await createLessonsWithRealQuestions(course2._id, [
       {
         title: "Chương 1: Part 3 - Conversations",
         description: "Luyện nghe hội thoại dài",
@@ -269,19 +272,18 @@ async function importRealTestData() {
       }
     ]);
 
-    roadmap1CourseIds.push(course1_2._id);
-    console.log(`✅ Created: ${course1_2.title}`);
+    roadmapCourseIds.push(course2._id);
+    console.log(`✅ Created: ${course2.title}`);
 
-    // Calculate total duration for course
-    const course1_2_lessons = await LessonModel.find({ course_id: course1_2._id });
-    const course1_2_duration = course1_2_lessons.reduce((sum, lesson) => sum + (lesson.duration || 0), 0);
-    await CourseModel.updateOne({ _id: course1_2._id }, { $set: { total_duration_minutes: course1_2_duration } });
-    console.log(`   ⏱️  Duration: ${course1_2_duration} minutes`);
-    console.log(`   👥 Enrollments: ${course1_2.total_enrollments} | ⭐ Rating: ${course1_2.average_rating} (${course1_2.total_reviews} reviews)`);
+    const course2_lessons = await LessonModel.find({ course_id: course2._id });
+    const course2_duration = course2_lessons.reduce((sum, lesson) => sum + (lesson.duration || 0), 0);
+    await CourseModel.updateOne({ _id: course2._id }, { $set: { total_duration_minutes: course2_duration } });
+    console.log(`   ⏱️  Duration: ${course2_duration} minutes`);
+    console.log(`   👥 Enrollments: ${course2.total_enrollments} | ⭐ Rating: ${course2.average_rating} (${course2.total_reviews} reviews)`);
 
     // Course 3: TOEIC Reading Part 5-6
-    console.log("\n📚 Course 3: TOEIC Reading Part 5-6");
-    const course1_3 = await CourseModel.create({
+    console.log("\n📚 Course 3: TOEIC Reading Cơ Bản Part 5-6");
+    const course3 = await CourseModel.create({
       title: "TOEIC Reading Cơ Bản Part 5-6",
       description: "Luyện đọc ngữ pháp và hoàn thành đoạn văn với câu hỏi thật từ ETS",
       thumbnail: "https://storage.googleapis.com/prep-storage-service/course/cover/qDgMeVyQqcHeqa5oz4lHTgpW5a8fSxKmB3mwzHHK.jpg",
@@ -292,12 +294,12 @@ async function importRealTestData() {
       price: 170000,
       original_price: 250000,
       is_free: false,
-      total_enrollments: 52,
+      total_enrollments: 55,
       average_rating: 4.6,
-      total_reviews: 15
+      total_reviews: 16
     });
 
-    await createLessonsWithRealQuestions(course1_3._id, [
+    await createLessonsWithRealQuestions(course3._id, [
       {
         title: "Chương 1: Part 5 - Grammar & Vocabulary",
         description: "Luyện ngữ pháp và từ vựng",
@@ -320,19 +322,18 @@ async function importRealTestData() {
       }
     ]);
 
-    roadmap1CourseIds.push(course1_3._id);
-    console.log(`✅ Created: ${course1_3.title}`);
+    roadmapCourseIds.push(course3._id);
+    console.log(`✅ Created: ${course3.title}`);
 
-    // Calculate total duration for course
-    const course1_3_lessons = await LessonModel.find({ course_id: course1_3._id });
-    const course1_3_duration = course1_3_lessons.reduce((sum, lesson) => sum + (lesson.duration || 0), 0);
-    await CourseModel.updateOne({ _id: course1_3._id }, { $set: { total_duration_minutes: course1_3_duration } });
-    console.log(`   ⏱️  Duration: ${course1_3_duration} minutes`);
-    console.log(`   👥 Enrollments: ${course1_3.total_enrollments} | ⭐ Rating: ${course1_3.average_rating} (${course1_3.total_reviews} reviews)`);
+    const course3_lessons = await LessonModel.find({ course_id: course3._id });
+    const course3_duration = course3_lessons.reduce((sum, lesson) => sum + (lesson.duration || 0), 0);
+    await CourseModel.updateOne({ _id: course3._id }, { $set: { total_duration_minutes: course3_duration } });
+    console.log(`   ⏱️  Duration: ${course3_duration} minutes`);
+    console.log(`   👥 Enrollments: ${course3.total_enrollments} | ⭐ Rating: ${course3.average_rating} (${course3.total_reviews} reviews)`);
 
     // Course 4: TOEIC Reading Part 7
     console.log("\n📚 Course 4: TOEIC Reading Part 7");
-    const course1_4 = await CourseModel.create({
+    const course4 = await CourseModel.create({
       title: "TOEIC Reading Part 7 - Đọc Hiểu",
       description: "Luyện đọc hiểu văn bản với câu hỏi thật từ ETS",
       thumbnail: "https://storage.googleapis.com/prep-storage-service/course/cover/qDgMeVyQqcHeqa5oz4lHTgpW5a8fSxKmB3mwzHHK.jpg",
@@ -343,12 +344,12 @@ async function importRealTestData() {
       price: 200000,
       original_price: 290000,
       is_free: false,
-      total_enrollments: 41,
+      total_enrollments: 44,
       average_rating: 4.9,
-      total_reviews: 13
+      total_reviews: 14
     });
 
-    await createLessonsWithRealQuestions(course1_4._id, [
+    await createLessonsWithRealQuestions(course4._id, [
       {
         title: "Chương 1: Single & Multiple Passages",
         description: "Đọc hiểu đoạn văn đơn và kép",
@@ -361,49 +362,138 @@ async function importRealTestData() {
       }
     ]);
 
-    roadmap1CourseIds.push(course1_4._id);
-    console.log(`✅ Created: ${course1_4.title}`);
+    roadmapCourseIds.push(course4._id);
+    console.log(`✅ Created: ${course4.title}`);
 
-    // Calculate total duration for course
-    const course1_4_lessons = await LessonModel.find({ course_id: course1_4._id });
-    const course1_4_duration = course1_4_lessons.reduce((sum, lesson) => sum + (lesson.duration || 0), 0);
-    await CourseModel.updateOne({ _id: course1_4._id }, { $set: { total_duration_minutes: course1_4_duration } });
-    console.log(`   ⏱️  Duration: ${course1_4_duration} minutes`);
-    console.log(`   👥 Enrollments: ${course1_4.total_enrollments} | ⭐ Rating: ${course1_4.average_rating} (${course1_4.total_reviews} reviews)`);
+    const course4_lessons = await LessonModel.find({ course_id: course4._id });
+    const course4_duration = course4_lessons.reduce((sum, lesson) => sum + (lesson.duration || 0), 0);
+    await CourseModel.updateOne({ _id: course4._id }, { $set: { total_duration_minutes: course4_duration } });
+    console.log(`   ⏱️  Duration: ${course4_duration} minutes`);
+    console.log(`   👥 Enrollments: ${course4.total_enrollments} | ⭐ Rating: ${course4.average_rating} (${course4.total_reviews} reviews)`);
 
-    // Calculate total roadmap duration and stats
-    const totalRoadmapMinutes = course1_1_duration + course1_2_duration + course1_3_duration + course1_4_duration;
-    const estimatedWeeks = Math.ceil(totalRoadmapMinutes / (60 * 10)); // Assuming 10 hours study per week
-    const totalRoadmapEnrollments = course1_1.total_enrollments + course1_2.total_enrollments + course1_3.total_enrollments + course1_4.total_enrollments;
-    const averageRoadmapRating = ((course1_1.average_rating + course1_2.average_rating + course1_3.average_rating + course1_4.average_rating) / 4).toFixed(1);
+    // Course 5: TOEIC Speaking Cơ Bản
+    console.log("\n📚 Course 5: TOEIC Speaking Cơ Bản");
+    const course5 = await CourseModel.create({
+      title: "TOEIC Speaking Cơ Bản",
+      description: "Khóa học tập trung vào kỹ năng nói cơ bản với bài tập thực hành từ ETS.",
+      thumbnail: "https://storage.googleapis.com/prep-storage-service/course/cover/qDgMeVyQqcHeqa5oz4lHTgpW5a8fSxKmB3mwzHHK.jpg",
+      skill_groups: ["speaking"],
+      assigned_teachers: [teacher._id],
+      is_published: true,
+      order: 5,
+      price: 150000,
+      original_price: 220000,
+      is_free: false,
+      total_enrollments: 36,
+      average_rating: 4.7,
+      total_reviews: 10
+    });
 
-    // Create Roadmap 1
-    const roadmap1 = await RoadmapModel.create({
-      title: "Lộ Trình Cơ Bản 2 Kỹ Năng - Listening & Reading 450+",
-      description: "Lộ trình học TOEIC hoàn chỉnh với câu hỏi thật từ ETS 2020. Gồm 4 khóa học bao gồm tất cả các Part từ 1-7.",
-      skill_groups: ["listening", "reading"],
-      target_score: 450,
-      courses: roadmap1CourseIds,
-      price: 700000,
-      discount_percentage: 20,
+    await createLessonsWithRealQuestions(course5._id, [
+      {
+        title: "Chương 1: Giới thiệu bản thân",
+        description: "Luyện nói giới thiệu bản thân cơ bản",
+        order: 1,
+        sections: [
+          { title: "Video: Hướng dẫn giới thiệu bản thân", type: "video", order: 1, video_url: "https://staredu-app-bucket.s3.ap-southeast-1.amazonaws.com/videos/Talk+About+the+Weather++Daily+English+Conversation++English+Speaking+%26+Listening+Practice.mp4", duration_minutes: 15 },
+          { title: "Mindmap: Cấu trúc câu giới thiệu", type: "mindmap", order: 2, mindmap_url: "https://lh7-rt.googleusercontent.com/docsz/AD_4nXcYusuaFOjIBwV56VIILxSgHPZz3ssSjjdbhUfsEGJ-7fVHRCSYt79sjcPNNpLRd6N3vVjGVdVNNySKpKfpRyKOV60KtYs5xdi2gLKUiUDxcQhC0mB_9VfpiUVK7JH5F_6TkE__bQ?key=Mn6ZeYKJRcJWjwlHVnr2zw", duration_minutes: 5 },
+          { title: "Exercise: Thực hành 8 câu", type: "exercise", order: 3, questionCount: 8, partNumber: 1, duration_minutes: 12 }
+        ]
+      },
+      {
+        title: "Chương 2: Mô tả hình ảnh",
+        description: "Luyện nói mô tả hình ảnh đơn giản",
+        order: 2,
+        sections: [
+          { title: "Video: Kỹ thuật mô tả hình ảnh", type: "video", order: 1, video_url: "https://staredu-app-bucket.s3.ap-southeast-1.amazonaws.com/videos/Talk+About+the+Weather++Daily+English+Conversation++English+Speaking+%26+Listening+Practice.mp4", duration_minutes: 18 },
+          { title: "Mindmap: Từ vựng mô tả", type: "mindmap", order: 2, mindmap_url: "https://lh7-rt.googleusercontent.com/docsz/AD_4nXcYusuaFOjIBwV56VIILxSgHPZz3ssSjjdbhUfsEGJ-7fVHRCSYt79sjcPNNpLRd6N3vVjGVdVNNySKpKfpRyKOV60KtYs5xdi2gLKUiUDxcQhC0mB_9VfpiUVK7JH5F_6TkE__bQ?key=Mn6ZeYKJRcJWjwlHVnr2zw", duration_minutes: 5 },
+          { title: "Exercise: Thực hành 10 bài", type: "exercise", order: 3, questionCount: 10, partNumber: 1, duration_minutes: 20 }
+        ]
+      }
+    ]);
+
+    roadmapCourseIds.push(course5._id);
+    console.log(`✅ Created: ${course5.title}`);
+
+    const course5_lessons = await LessonModel.find({ course_id: course5._id });
+    const course5_duration = course5_lessons.reduce((sum, lesson) => sum + (lesson.duration || 0), 0);
+    await CourseModel.updateOne({ _id: course5._id }, { $set: { total_duration_minutes: course5_duration } });
+    console.log(`   ⏱️  Duration: ${course5_duration} minutes`);
+    console.log(`   👥 Enrollments: ${course5.total_enrollments} | ⭐ Rating: ${course5.average_rating} (${course5.total_reviews} reviews)`);
+
+    // Course 6: TOEIC Writing Cơ Bản
+    console.log("\n📚 Course 6: TOEIC Writing Cơ Bản");
+    const course6 = await CourseModel.create({
+      title: "TOEIC Writing Cơ Bản",
+      description: "Luyện viết câu và đoạn văn cơ bản với bài tập thực hành từ ETS",
+      thumbnail: "https://storage.googleapis.com/prep-storage-service/course/cover/qDgMeVyQqcHeqa5oz4lHTgpW5a8fSxKmB3mwzHHK.jpg",
+      skill_groups: ["writing"],
+      assigned_teachers: [teacher._id],
+      is_published: true,
+      order: 6,
+      price: 130000,
+      original_price: 190000,
+      is_free: false,
+      total_enrollments: 31,
+      average_rating: 4.8,
+      total_reviews: 9
+    });
+
+    await createLessonsWithRealQuestions(course6._id, [
+      {
+        title: "Chương 1: Viết câu cơ bản",
+        description: "Luyện viết câu đơn giản",
+        order: 1,
+        sections: [
+          { title: "Video: Hướng dẫn viết câu", type: "video", order: 1, video_url: "https://staredu-app-bucket.s3.ap-southeast-1.amazonaws.com/videos/Talk+About+the+Weather++Daily+English+Conversation++English+Speaking+%26+Listening+Practice.mp4", duration_minutes: 18 },
+          { title: "Mindmap: Cấu trúc câu cơ bản", type: "mindmap", order: 2, mindmap_url: "https://lh7-rt.googleusercontent.com/docsz/AD_4nXcYusuaFOjIBwV56VIILxSgHPZz3ssSjjdbhUfsEGJ-7fVHRCSYt79sjcPNNpLRd6N3vVjGVdVNNySKpKfpRyKOV60KtYs5xdi2gLKUiUDxcQhC0mB_9VfpiUVK7JH5F_6TkE__bQ?key=Mn6ZeYKJRcJWjwlHVnr2zw", duration_minutes: 5 },
+          { title: "Exercise: Thực hành 12 câu", type: "exercise", order: 3, questionCount: 12, partNumber: 2, duration_minutes: 22 }
+        ]
+      }
+    ]);
+
+    roadmapCourseIds.push(course6._id);
+    console.log(`✅ Created: ${course6.title}`);
+
+    const course6_lessons = await LessonModel.find({ course_id: course6._id });
+    const course6_duration = course6_lessons.reduce((sum, lesson) => sum + (lesson.duration || 0), 0);
+    await CourseModel.updateOne({ _id: course6._id }, { $set: { total_duration_minutes: course6_duration } });
+    console.log(`   ⏱️  Duration: ${course6_duration} minutes`);
+    console.log(`   👥 Enrollments: ${course6.total_enrollments} | ⭐ Rating: ${course6.average_rating} (${course6.total_reviews} reviews)`);
+
+    // Calculate total roadmap stats
+    const totalRoadmapMinutes = course1_duration + course2_duration + course3_duration + course4_duration + course5_duration + course6_duration;
+    const estimatedWeeks = Math.ceil(totalRoadmapMinutes / (60 * 10));
+    const totalRoadmapEnrollments = course1.total_enrollments + course2.total_enrollments + course3.total_enrollments + course4.total_enrollments + course5.total_enrollments + course6.total_enrollments;
+    const averageRoadmapRating = ((course1.average_rating + course2.average_rating + course3.average_rating + course4.average_rating + course5.average_rating + course6.average_rating) / 6).toFixed(1);
+
+    // Create Roadmap
+    const roadmap = await RoadmapModel.create({
+      title: "Lộ Trình Cao Cấp 4 Kỹ Năng - 800+ & 300+",
+      description: "Lộ trình học TOEIC hoàn chỉnh 4 kỹ năng cao cấp với câu hỏi thật từ ETS 2020. Gồm 6 khóa học: Listening & Reading (800+) + Speaking & Writing (300+).",
+      skill_groups: ["listening", "reading", "speaking", "writing"],
+      target_score: 1100, // 800 + 300
+      courses: roadmapCourseIds,
+      price: 1650000,
+      discount_percentage: 25,
       is_published: true,
       total_enrollments: totalRoadmapEnrollments,
       average_rating: parseFloat(averageRoadmapRating),
       estimated_duration_weeks: estimatedWeeks
     });
 
-    console.log(`\n✅ Created Roadmap: ${roadmap1.title}`);
-    console.log(`   - Total Courses: ${roadmap1CourseIds.length}`);
+    console.log(`\n✅ Created Roadmap: ${roadmap.title}`);
+    console.log(`   - Total Courses: ${roadmapCourseIds.length}`);
     console.log(`   - Total Duration: ${totalRoadmapMinutes} minutes (~${Math.round(totalRoadmapMinutes/60)} hours)`);
     console.log(`   - Estimated Duration: ${estimatedWeeks} weeks`);
-    console.log(`   - Total Enrollments: ${roadmap1.total_enrollments} students`);
-    console.log(`   - Average Rating: ${roadmap1.average_rating} ⭐`);
-    console.log(`   - Original Price: ${roadmap1.price.toLocaleString('vi-VN')} VND`);
-    console.log(`   - Final Price: ${Math.round(roadmap1.price * (1 - roadmap1.discount_percentage / 100)).toLocaleString('vi-VN')} VND (${roadmap1.discount_percentage}% off)`);
-    console.log(`   - Uses REAL ETS 2020 Test 1 questions`);
+    console.log(`   - Total Enrollments: ${roadmap.total_enrollments} students`);
+    console.log(`   - Average Rating: ${roadmap.average_rating} ⭐`);
+    console.log(`   - Original Price: ${roadmap.price.toLocaleString('vi-VN')} VND`);
+    console.log(`   - Final Price: ${Math.round(roadmap.price * (1 - roadmap.discount_percentage / 100)).toLocaleString('vi-VN')} VND (${roadmap.discount_percentage}% off)`);
+    console.log(`   - Target: L&R 800+ & S&W 300+`);
 
     console.log("\n" + "=".repeat(70));
-    console.log("✅ Import hoàn tất với câu hỏi thật từ ETS 2020 Test 1!");
+    console.log("✅ Import hoàn tất - Lộ Trình Cao Cấp 4 Kỹ Năng!");
     console.log("=".repeat(70));
 
     process.exit(0);
@@ -418,4 +508,4 @@ async function importRealTestData() {
 }
 
 // Run import
-importRealTestData();
+importAdvanced4SkillsData();

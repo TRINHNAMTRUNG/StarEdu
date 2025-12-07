@@ -13,6 +13,7 @@ import adminUserRoutes from "./user.routes";
 import { authenticateToken, authorizeRoles } from "../../middlewares/auth.middleware";
 import { UserRole } from "../../models/user.model";
 import adminWritingRoutes from "./admin-writing.routes";
+import adminStatsRoutes from "./statistics.routes";
 
 const adminRouter = Router();
 
@@ -31,5 +32,6 @@ adminRouter.use("/tests", authenticateToken, authorizeRoles(UserRole.ADMIN), adm
 adminRouter.use("/dictations", authenticateToken, authorizeRoles(UserRole.ADMIN), adminDictationRoutes);
 adminRouter.use("/users", authenticateToken, authorizeRoles(UserRole.ADMIN), adminUserRoutes);
 adminRouter.use("/writing-prompts", authenticateToken, authorizeRoles(UserRole.ADMIN), adminWritingRoutes);
+adminRouter.use("/statistics", adminStatsRoutes); // Statistics routes have their own auth
 
 export default adminRouter;

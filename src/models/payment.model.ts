@@ -2,7 +2,8 @@ import mongoose, { Schema, Model, InferSchemaType } from "mongoose";
 
 const PaymentSchema = new Schema({
     student: { type: Schema.Types.ObjectId, ref: "Student", required: true },
-    roadmap: { type: Schema.Types.ObjectId, ref: "Roadmap", required: true },
+    roadmap: { type: Schema.Types.ObjectId, ref: "Roadmap" }, // Single roadmap (legacy)
+    roadmaps: [{ type: Schema.Types.ObjectId, ref: "Roadmap" }], // Multiple roadmaps (new)
     amount: { type: Number, required: true },
     gateway: {
         type: String,
@@ -18,6 +19,15 @@ const PaymentSchema = new Schema({
     transaction_id: { type: String },
     payment_date: { type: Date }
 }, { timestamps: true, collection: "payments" });
+
+// Custom validation: Either roadmap or roadmaps must be present
+PaymentSchema.pre('save', function(next) {
+    if (!this.roadmap && (!this.roadmaps || this.roadmaps.length === 0)) {
+        next(new Error('Either roadmap or roadmaps must be provided'));
+    } else {
+        next();
+    }
+});
 
 export type IPayment = InferSchemaType<typeof PaymentSchema>;
 const PaymentModel: Model<IPayment> = mongoose.model<IPayment>("Payment", PaymentSchema);

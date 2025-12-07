@@ -13,16 +13,34 @@ import mongoose from "mongoose";
 @injectable()
 class PaymentService {
     /**
-     * CREATE PAYMENT
+     * CREATE PAYMENT - Support both single and multiple roadmaps
      */
-    async createPayment(studentId: string, roadmapId: string, gateway: PaymentGateway, redirectUrl?: string) {
+    async createPayment(
+        studentId: string, 
+        roadmapId: string | undefined, 
+        roadmapIds: string[] | undefined,
+        gateway: PaymentGateway, 
+        redirectUrl?: string
+    ) {
         const student = await StudentModel.findOne({ user: studentId });
         if (!student) {
             throw AppError.notFoundError("Student không tồn tại");
         }
 
-        // ✅ FIX: lean() với generic type
-        const roadmap = await RoadmapModel.findById(roadmapId).lean<{
+        // Determine which roadmaps to process
+        let roadmapsToProcess: string[] = [];
+        if (roadmapIds && roadmapIds.length > 0) {
+            roadmapsToProcess = roadmapIds;
+        } else if (roadmapId) {
+            roadmapsToProcess = [roadmapId];
+        } else {
+            throw AppError.badRequestError("Phải cung cấp roadmap_id hoặc roadmap_ids");
+        }
+
+        // Fetch all roadmaps
+        const roadmaps = await RoadmapModel.find({ 
+            _id: { $in: roadmapsToProcess } 
+        }).lean<Array<{
             _id: any;
             title: string;
             thumbnail?: string;
@@ -30,33 +48,46 @@ class PaymentService {
             discount_price?: number;
             discount_percentage?: number;
             price: number;
-        }>();
+        }>>();
 
-        if (!roadmap) {
-            throw AppError.notFoundError("Roadmap không tồn tại");
+        if (roadmaps.length !== roadmapsToProcess.length) {
+            throw AppError.notFoundError("Một hoặc nhiều roadmap không tồn tại");
         }
 
-        if (!roadmap.is_published) {
-            throw AppError.badRequestError("Roadmap chưa được publish");
+        // Check if all roadmaps are published
+        const unpublishedRoadmaps = roadmaps.filter(r => !r.is_published);
+        if (unpublishedRoadmaps.length > 0) {
+            throw AppError.badRequestError(`Roadmap "${unpublishedRoadmaps[0].title}" chưa được publish`);
         }
 
-        const existingEnrollment = await EnrollmentModel.findOne({
+        // Check existing enrollments
+        const existingEnrollments = await EnrollmentModel.find({
             student: student._id,
-            roadmap: roadmapId
+            roadmap: { $in: roadmapsToProcess }
         });
 
-        if (existingEnrollment) {
-            throw AppError.conflictError("Bạn đã đăng ký roadmap này rồi");
+        if (existingEnrollments.length > 0) {
+            const enrolledRoadmap = roadmaps.find(r => 
+                existingEnrollments.some(e => e.roadmap.toString() === r._id.toString())
+            );
+            throw AppError.conflictError(`Bạn đã đăng ký roadmap "${enrolledRoadmap?.title}" rồi`);
         }
 
-        // Calculate final amount with discount applied
-        const amount = roadmap.discount_price || (roadmap.price * (1 - (roadmap.discount_percentage || 0) / 100));
+        // Calculate total amount with discounts
+        const totalAmount = roadmaps.reduce((sum, roadmap) => {
+            const roadmapAmount = roadmap.discount_price || 
+                (roadmap.price * (1 - (roadmap.discount_percentage || 0) / 100));
+            return sum + roadmapAmount;
+        }, 0);
+
         const orderId = `${gateway.toUpperCase()}_${Date.now()}`;
 
+        // Create payment with multiple roadmaps
         const payment = await PaymentModel.create({
             student: student._id,
-            roadmap: roadmapId,
-            amount,
+            roadmap: roadmapsToProcess.length === 1 ? roadmapsToProcess[0] : undefined, // Legacy support
+            roadmaps: roadmapsToProcess, // New field
+            amount: totalAmount,
             gateway: gateway,
             status: "pending",
             order_id: orderId
@@ -64,17 +95,40 @@ class PaymentService {
 
         let paymentUrl: string;
 
-        console.log(`🔵 Creating payment with gateway: ${gateway}`);
+        console.log(`🔵 Creating payment for ${roadmaps.length} roadmap(s) with gateway: ${gateway}`);
+
+        // Create description for payment
+        const description = roadmaps.length === 1 
+            ? roadmaps[0].title 
+            : `${roadmaps.length} lộ trình TOEIC`;
 
         switch (gateway) {
             case PaymentGateway.MOMO:
-                paymentUrl = await this.createMoMoPayment(payment._id.toString(), roadmap, amount, orderId, redirectUrl);
+                paymentUrl = await this.createMoMoPayment(
+                    payment._id.toString(), 
+                    { title: description }, 
+                    totalAmount, 
+                    orderId, 
+                    redirectUrl
+                );
                 break;
             case PaymentGateway.VNPAY:
-                paymentUrl = await this.createVNPayPayment(payment._id.toString(), roadmap, amount, orderId, redirectUrl);
+                paymentUrl = await this.createVNPayPayment(
+                    payment._id.toString(), 
+                    { title: description }, 
+                    totalAmount, 
+                    orderId, 
+                    redirectUrl
+                );
                 break;
             case PaymentGateway.ZALOPAY:
-                paymentUrl = await this.createZaloPayPayment(payment._id.toString(), roadmap, amount, orderId, redirectUrl);
+                paymentUrl = await this.createZaloPayPayment(
+                    payment._id.toString(), 
+                    { title: description }, 
+                    totalAmount, 
+                    orderId, 
+                    redirectUrl
+                );
                 break;
             default:
                 throw AppError.badRequestError("Gateway không được hỗ trợ");
@@ -244,40 +298,66 @@ class PaymentService {
             throw AppError.notFoundError("Student không tồn tại");
         }
 
-        // Check existing enrollment (in session if provided)
-        const existingEnrollment = await EnrollmentModel.findOne({
-            student: student._id,
-            roadmap: payment.roadmap
-        }).session(session ?? null);
+        // Determine roadmap IDs to enroll
+        const roadmapIds = payment.roadmaps && payment.roadmaps.length > 0 
+            ? payment.roadmaps 
+            : payment.roadmap 
+                ? [payment.roadmap] 
+                : [];
 
-        if (existingEnrollment) {
-            console.warn(`Enrollment already exists for payment ${payment._id}`);
-            return existingEnrollment;
+        if (roadmapIds.length === 0) {
+            throw AppError.badRequestError("Payment không có roadmap nào");
         }
 
-        // Create enrollment
-        const [enrollment] = await EnrollmentModel.create(
-            [{
+        const createdEnrollments = [];
+
+        // Create enrollment for each roadmap
+        for (const roadmapId of roadmapIds) {
+            // Check existing enrollment (in session if provided)
+            const existingEnrollment = await EnrollmentModel.findOne({
                 student: student._id,
-                roadmap: payment.roadmap,
-                payment_id: payment._id,
-                enrolled_date: new Date(),
-                enrolled_by: "momo",
-                status: "active",
-                enrolled_price: payment.amount,
-                completion_percentage: 0
-            }],
-            { session }
-        );
+                roadmap: roadmapId
+            }).session(session ?? null);
 
-        // Increment roadmap.total_enrollments atomically within transaction
-        await RoadmapModel.findByIdAndUpdate(
-            payment.roadmap,
-            { $inc: { total_enrollments: 1 } },
-            { session }
-        );
+            if (existingEnrollment) {
+                console.warn(`Enrollment already exists for roadmap ${roadmapId}, payment ${payment._id}`);
+                createdEnrollments.push(existingEnrollment);
+                continue;
+            }
 
-        return enrollment;
+            // Calculate price per roadmap (equal split if multiple)
+            const pricePerRoadmap = roadmapIds.length > 1 
+                ? payment.amount / roadmapIds.length 
+                : payment.amount;
+
+            // Create enrollment
+            const [enrollment] = await EnrollmentModel.create(
+                [{
+                    student: student._id,
+                    roadmap: roadmapId,
+                    payment_id: payment._id,
+                    enrolled_date: new Date(),
+                    enrolled_by: payment.gateway, // Use gateway (momo/vnpay/zalopay)
+                    status: "active",
+                    enrolled_price: pricePerRoadmap,
+                    completion_percentage: 0
+                }],
+                { session }
+            );
+
+            // Increment roadmap.total_enrollments atomically within transaction
+            await RoadmapModel.findByIdAndUpdate(
+                roadmapId,
+                { $inc: { total_enrollments: 1 } },
+                { session }
+            );
+
+            createdEnrollments.push(enrollment);
+            console.log(`✅ Enrollment created for roadmap ${roadmapId}`);
+        }
+
+        console.log(`✅ Total ${createdEnrollments.length} enrollments created for payment ${payment._id}`);
+        return createdEnrollments[0]; // Return first enrollment for compatibility
     }
 
     /**
@@ -321,12 +401,31 @@ class PaymentService {
 
             try {
                 await session.withTransaction(async () => {
+                    console.log('🔄 Updating payment status to success...');
+                    console.log('Payment data:', {
+                        id: payment._id,
+                        roadmap: payment.roadmap,
+                        roadmaps: payment.roadmaps,
+                        hasRoadmap: !!payment.roadmap,
+                        hasRoadmaps: payment.roadmaps && payment.roadmaps.length > 0
+                    });
+                    
                     payment.status = "success";
                     payment.payment_date = new Date();
-                    await payment.save({ session });
+                    
+                    try {
+                        await payment.save({ session });
+                        console.log('✅ Payment status updated successfully');
+                    } catch (saveError: any) {
+                        console.error('❌ Failed to save payment:', saveError);
+                        console.error('Validation errors:', saveError.errors);
+                        throw saveError;
+                    }
 
+                    console.log('🔄 Creating enrollments...');
                     const enrollment = await this.createEnrollment(payment, session);
                     enrollmentId = enrollment._id.toString();
+                    console.log('✅ Enrollments created:', enrollmentId);
                 });
 
                 console.log(`✅ Payment verified and enrollment created: ${enrollmentId}`);
@@ -337,6 +436,9 @@ class PaymentService {
                     message: "Xác nhận thanh toán thành công",
                     enrollment_id: enrollmentId
                 };
+            } catch (error: any) {
+                console.error('❌ Transaction failed:', error);
+                throw error;
             } finally {
                 session.endSession();
             }

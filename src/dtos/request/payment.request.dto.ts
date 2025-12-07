@@ -1,11 +1,16 @@
-import { IsEnum, IsMongoId, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from "class-validator";
+import { IsArray, IsEnum, IsMongoId, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from "class-validator";
 import { PaymentGateway } from "../../types/payment.types";
 
 // POST /student/payments/create
 export class CreatePaymentReqDto {
-    @IsNotEmpty()
+    @IsOptional()
     @IsMongoId()
-    roadmap_id!: string;
+    roadmap_id?: string; // Single roadmap (legacy support)
+
+    @IsOptional()
+    @IsArray()
+    @IsMongoId({ each: true })
+    roadmap_ids?: string[]; // Multiple roadmaps (new)
 
     @IsNotEmpty()
     @IsEnum(PaymentGateway)
