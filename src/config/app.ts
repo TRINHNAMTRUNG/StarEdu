@@ -21,6 +21,21 @@ app.use(cors({
 // Add request ID to all requests
 app.use(requestIdMiddleware);
 
+// Root endpoint
+app.get('/', (req, res) => {
+    res.status(200).json({
+        name: 'StarEdu API',
+        version: '1.0.0',
+        status: 'running',
+        endpoints: {
+            health: '/health',
+            api: '/api',
+            docs: '/api-docs'
+        },
+        timestamp: new Date().toISOString()
+    });
+});
+
 // Health check endpoint for Render
 app.get('/health', (req, res) => {
     res.status(200).json({ 
