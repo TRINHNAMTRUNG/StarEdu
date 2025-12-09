@@ -2,7 +2,7 @@ import { injectable } from "tsyringe";
 import { StudentRegisterReqDto } from "../dtos/request/Auth.request.dto";
 import UserModel, { UserRole } from "../models/user.model";
 import AppError from "../utils/AppError";
-import InfobipService from "./infobip.service";
+// import InfobipService from "./infobip.service";
 import { encryptPassword } from "../utils/password.util";
 import StudentService from "./student.service";
 import TeacherService from "./teacher.service";
@@ -10,13 +10,15 @@ import { JwtUserPayload, verifyRefreshToken, generateTokens } from "../utils/tok
 import RefreshTokenModel from "../models/refreshToken.model";
 import mongoose from "mongoose";
 import { Level } from "../models/student.model";
+import FirebaseAuthService from "./firebase-auth.service"; // <-- new import
 
 @injectable()
 class AuthService {
     constructor(
-        private infobipService: InfobipService,
+        // private infobipService: InfobipService,
         private studentService: StudentService,
-        private teacherService: TeacherService // Inject TeacherService
+        private teacherService: TeacherService, // Inject TeacherService
+        private firebaseAuthService: FirebaseAuthService // <-- injected Firebase service
     ) { }
 
     /**
@@ -27,67 +29,59 @@ class AuthService {
 
     registerStudentByPhone = async (userInfo: StudentRegisterReqDto) => {
         console.log("Registering student:", userInfo);
-        let { phone, password } = userInfo;
+        let { phone, password, name, gender } = userInfo;
 
         // Kiểm tra student đã đăng kí tài khoản chưa
-        let hasAccount = await UserModel.findOne({ phone });
+        let hasAccount = await UserModel.findOne({ phone: formatToE164(phone) });
         if (hasAccount) {
             throw AppError.conflictError("Số điện thoại đã được sử dụng");
         }
 
-        // Chưa đăng kí, tạo mới account
-        let encryptedPassword = await encryptPassword(password);
-        const account = await UserModel.create({ ...userInfo, password: encryptedPassword, role: UserRole.STUDENT });
-
-        // Gửi OTP xác thực đến số điện thoại
-        let phoneNumberReplace = phone.replace("0", "84");
-        console.log("Sending OTP to:", phoneNumberReplace);
-        // const smsPinId = await this.infobipService.sendOTP(phoneNumberReplace);
-        const smsPinId = await this.infobipService.mockSendOTP(phoneNumberReplace);
-
-        // Lưu pinId trả về từ infobip vào database
-        account.pinId = smsPinId;
-        await account.save();
-
-        // ✅ FIX: Convert _id to string
-        return {
-            ...account.toObject(),
-            _id: account._id.toString()
-        };
-    }
-
-    verifyAccountOtp = async (phone: string, code: string) => {
-        // Kiểm tra sự tồn tại của tài khoản
-        let hasAccount = await UserModel.findOne({ phone }, { password: 0, createdAt: 0, updatedAt: 0 });
-        if (!hasAccount) {
-            throw AppError.conflictError("Số điện thoại chưa được đăng ký");
-        }
-        if (hasAccount.isVerified) {
-            throw AppError.badRequestError("Tài khoản đã được xác thực");
+        // Ensure firebaseIdToken provided
+        const firebaseIdToken = (userInfo as any).firebaseIdToken;
+        if (!firebaseIdToken) {
+            throw AppError.badRequestError("Thiếu firebaseIdToken từ client. FE phải gửi idToken sau khi xác thực OTP bằng Firebase client.");
         }
 
-        // Xác minh OTP
-        if (!hasAccount.pinId) {
-            throw AppError.badRequestError("Tài khoản chưa được gửi mã OTP");
-        }
-        // const verifyResult: boolean = await this.infobipService.verifyOTP(hasAccount.pinId, code);
-        const verifyResult: boolean = await this.infobipService.mockVerifyOTP(hasAccount.pinId, code);
-        if (!verifyResult) {
-            throw AppError.unauthorizedError("Mã OTP không hợp lệ");
+        // VERIFY idToken with Firebase Admin
+        let decoded: any;
+        try {
+            decoded = await this.firebaseAuthService.verifyIdToken(firebaseIdToken);
+        } catch (err) {
+            console.error("Firebase token verify failed:", err);
+            throw err; // AppError từ service
         }
 
-        // Cập nhật trạng thái tài khoản đã xác thực
-        hasAccount.isVerified = true;
-        hasAccount.pinId = undefined; // Xoá pinId đã sử dụng
-        const user = await hasAccount.save();
-        await this.studentService.createStudentWithUserId(user._id.toString(), Level.A1, 0);
+        // Ensure phone in token matches provided phone (safety)
+        const tokenPhone = decoded.phone_number;
+        if (!tokenPhone) {
+            throw AppError.unauthorizedError("Firebase token không chứa phone number");
+        }
+        const normalizedTokenPhone = formatToE164(tokenPhone);
+        const normalizedProvidedPhone = formatToE164(phone);
+        if (normalizedTokenPhone !== normalizedProvidedPhone) {
+            console.warn("Phone mismatch token vs provided:", normalizedTokenPhone, normalizedProvidedPhone);
+            throw AppError.unauthorizedError("Số điện thoại trong Firebase token không khớp với số điện thoại gửi lên");
+        }
 
-        // ✅ FIX: Convert _id to string
-        return {
-            ...user.toObject(),
-            _id: user._id.toString(),
-            ...generateTokens({ id: user._id.toString(), role: user.role })
-        };
+        // Now create user (only after token verified)
+        const encryptedPassword = await encryptPassword(password);
+        const account = await UserModel.create({
+            name,
+            password: encryptedPassword,
+            role: UserRole.STUDENT,
+            phone: normalizedProvidedPhone,
+            gender,
+            isVerified: true
+        });
+
+        // create student record
+        await this.studentService.createStudentWithUserId(account._id.toString(), Level.A1, 0);
+
+        // Return user + tokens (hide password)
+        const userObj: any = account.toObject();
+        userObj.password = undefined;
+        return { ...userObj, ...generateTokens({ id: account._id.toString(), role: account.role }) };
     }
 
     login = async (phone: string, password: string, expectedRole?: UserRole) => {
@@ -103,25 +97,24 @@ class AuthService {
             throw AppError.forbiddenError("Tài khoản đã bị khóa");
         }
 
-        // Cập nhật thời gian đăng nhập cuối
-        user.last_login = new Date();
-        await user.save();
+        // ✅ THÊM: Check role match với route
+        if (expectedRole && user.role !== expectedRole) {
+            throw AppError.forbiddenError(`Tài khoản này không phải là ${expectedRole}`);
+        }
 
-        // Sinh token và lưu refresh token vào database
+        const isPasswordMatch = await user.comparePassword(password);
+        if (!isPasswordMatch) {
+            throw AppError.unauthorizedError("Mật khẩu không chính xác");
+        }
+
         const tokens = generateTokens({ id: user._id.toString(), role: user.role });
-        await RefreshTokenModel.create({
-            user: user._id,
-            token: tokens.refresh_token,
-            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 ngày
-        });
 
-        // ✅ FIX: Convert _id to string
         return {
             ...user.toObject(),
-            _id: user._id.toString(),
+            password: undefined,
             ...tokens
         };
-    }
+    };
 
     logout = async (refreshToken: string) => {
         if (!refreshToken) {
@@ -262,7 +255,6 @@ class AuthService {
             modified,
             alreadyBanned: alreadyBanned.length,
             notFound: notFoundIds.length,
-            // ✅ FIX: Ensure _id is string in bannedUsers array
             bannedUsers: usersToban.map(u => ({
                 _id: u._id.toString(),
                 name: u.name,
@@ -309,7 +301,6 @@ class AuthService {
             modified,
             alreadyActive: alreadyActive.length,
             notFound: notFoundIds.length,
-            // ✅ FIX: Ensure _id is string in unbannedUsers array
             unbannedUsers: usersToUnban.map(u => ({
                 _id: u._id.toString(),
                 name: u.name,
@@ -319,6 +310,18 @@ class AuthService {
             notFoundIds
         };
     }
+
+}
+
+/* helper: normalize phone to E.164 for Vietnam */
+function formatToE164(phone: string): string {
+    if (!phone) return phone;
+    const cleaned = phone.trim();
+    if (cleaned.startsWith("+")) return cleaned;
+    if (cleaned.startsWith("0")) return `+84${cleaned.slice(1)}`;
+    if (cleaned.startsWith("84")) return `+${cleaned}`;
+    // fallback: assume local number
+    return `+${cleaned}`;
 }
 
 export default AuthService;

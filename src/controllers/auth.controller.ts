@@ -156,29 +156,29 @@ export class AuthController {
         }
     );
 
-    verifyStudentOtp = asyncHandler(
-        async (req: Request<{}, {}, VerifyOtpReqDto>, res: Response, next: NextFunction) => {
-            const { phone, code } = req.body;
-            const user = await this.authService.verifyAccountOtp(phone, code);
+    // verifyStudentOtp = asyncHandler(
+    //     async (req: Request<{}, {}, VerifyOtpReqDto>, res: Response, next: NextFunction) => {
+    //         const { phone, code } = req.body;
+    //         const user = await this.authService.verifyAccountOtp(phone, code);
 
-            // Chuẩn hóa đầu ra dto
-            const userResDto = instanceToPlain(
-                plainToInstance(
-                    StudentVerifyResDto,
-                    user,
-                    { excludeExtraneousValues: true }
-                )
-            );
-            return res.status(200).json(
-                ResponseFormat.successResponse(
-                    userResDto,
-                    "Xác thực OTP thành công!",
-                    200,
-                    req.requestId
-                )
-            )
-        }
-    );
+    //         // Chuẩn hóa đầu ra dto
+    //         const userResDto = instanceToPlain(
+    //             plainToInstance(
+    //                 StudentVerifyResDto,
+    //                 user,
+    //                 { excludeExtraneousValues: true }
+    //             )
+    //         );
+    //         return res.status(200).json(
+    //             ResponseFormat.successResponse(
+    //                 userResDto,
+    //                 "Xác thực OTP thành công!",
+    //                 200,
+    //                 req.requestId
+    //             )
+    //         )
+    //     }
+    // );
 
     /**
      * --------------

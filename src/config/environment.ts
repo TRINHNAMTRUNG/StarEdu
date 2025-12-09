@@ -52,7 +52,22 @@ const envSchema = z.object({
 
     // --- URLs ---
     FRONTEND_URL: z.string().url(),
-    BACKEND_URL: z.string().url()
+    BACKEND_URL: z.string().url(),
+
+    // --- THÔNG TIN SPEEDSMS ---
+    SPEEDSMS_ACCESS_TOKEN: z.string().min(1),
+    SPEEDSMS_APP_ID: z.string().min(1),
+
+    //--- THÔNG TIN FIREBASE ---        
+    FIREBASE_PROJECT_ID: z.string().min(1),
+    FIREBASE_PRIVATE_KEY: z.string().min(1),
+    FIREBASE_CLIENT_EMAIL: z.string().min(1),
+    FIREBASE_API_KEY: z.string().min(1),
+
+    // --- reCAPTCHA secret for server-side verification ---
+    RECAPTCHA_SECRET_KEY: z.string().min(1),
+    RECAPTCHA_SITE_KEY: z.string().min(1),
+    RECAPTCHA_API_KEY: z.string().min(1),
 });
 
 const parsed = envSchema.safeParse({
@@ -94,10 +109,17 @@ const parsed = envSchema.safeParse({
     FRONTEND_URL: process.env.FRONTEND_URL,
     BACKEND_URL: process.env.BACKEND_URL,
 
-    // TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
-    // TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
-    // TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER,
-    // TWILIO_VERIFY_SERVICE_SID: process.env.TWILIO_VERIFY_SERVICE_SID
+    SPEEDSMS_ACCESS_TOKEN: process.env.ACCESS_TOKEN_SPEEDSMS,
+    SPEEDSMS_APP_ID: process.env.SPEEDSMS_APP_ID,
+
+    FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
+    FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY,
+    FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL,
+    FIREBASE_API_KEY: process.env.FIREBASE_API_KEY,
+
+    RECAPTCHA_SECRET_KEY: process.env.RECAPTCHA_SECRET_KEY,
+    RECAPTCHA_SITE_KEY: process.env.RECAPTCHA_SITE_KEY,
+    RECAPTCHA_API_KEY: process.env.RECAPTCHA_API_KEY,
 });
 
 if (!parsed.success) {
