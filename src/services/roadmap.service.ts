@@ -69,7 +69,6 @@ class RoadmapService {
         const [total, roadmaps] = await Promise.all([
             RoadmapModel.countDocuments(query),
             RoadmapModel.find(query)
-                .select("_id title target_level duration_weeks price discount_price is_published is_free total_enrollments")
                 .sort({ createdAt: -1 })
                 .skip((page - 1) * limit)
                 .limit(limit)
@@ -82,7 +81,8 @@ class RoadmapService {
             limit,
             data: roadmaps.map(r => ({
                 ...r,
-                _id: r._id.toString()
+                _id: r._id.toString(),
+                thumbnail: r.thumbnail || null  // Ensure thumbnail field always exists
             }))
         };
     }
