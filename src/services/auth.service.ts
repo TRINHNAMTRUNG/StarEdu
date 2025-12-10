@@ -102,7 +102,14 @@ class AuthService {
             throw AppError.forbiddenError(`Tài khoản này không phải là ${expectedRole}`);
         }
 
+        console.log('🔍 DEBUG PASSWORD CHECK:');
+        console.log('  - Input password:', password);
+        console.log('  - Stored hash:', user.password?.substring(0, 20) + '...');
+        console.log('  - Hash type:', user.password?.substring(0, 4));
+
         const isPasswordMatch = await user.comparePassword(password);
+        console.log('  - Match result:', isPasswordMatch);
+
         if (!isPasswordMatch) {
             throw AppError.unauthorizedError("Mật khẩu không chính xác");
         }
@@ -309,6 +316,36 @@ class AuthService {
             })),
             notFoundIds
         };
+    }
+
+    /**
+     * Cập nhật điểm mục tiêu cho user
+     */
+    async updateTargetScore(userId: string, targetScore: number) {
+        const user = await UserModel.findByIdAndUpdate(
+            userId,
+            { target_score: targetScore },
+            { new: true }
+        ).select('_id name phone target_score');
+
+        if (!user) {
+            throw AppError.notFoundError("Người dùng không tồn tại");
+        }
+
+        return user;
+    }
+
+    /**
+     * Lấy thông tin profile của user
+     */
+    async getProfile(userId: string) {
+        const user = await UserModel.findById(userId).select('-password');
+        
+        if (!user) {
+            throw AppError.notFoundError("Người dùng không tồn tại");
+        }
+
+        return user;
     }
 
 }

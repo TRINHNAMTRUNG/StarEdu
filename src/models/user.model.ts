@@ -74,6 +74,12 @@ const UserSchema = new Schema({
     isActive: {
         type: Boolean,
         default: true
+    },
+    target_score: {
+        type: Number,
+        min: 0,
+        max: 990,
+        default: null
     }
     // otp: {
     //     type: OtpSchema

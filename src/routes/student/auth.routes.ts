@@ -4,6 +4,7 @@ import { AuthController } from "../../controllers/auth.controller";
 import multer from "multer";
 import { validationBody, log } from "../../middlewares/validationError.middleware";
 import { StudentRegisterReqDto, VerifyOtpReqDto, LoginReqDto, LogoutReqDto } from "../../dtos/request/Auth.request.dto";
+import { authenticateToken } from "../../middlewares/auth.middleware";
 
 const studentAuthRoutes = Router();
 const authController = container.resolve(AuthController);
@@ -38,6 +39,18 @@ studentAuthRoutes.post(
 studentAuthRoutes.post(
     "/refresh-token",
     authController.refreshToken
+);
+
+studentAuthRoutes.patch(
+    "/update-target-score",
+    authenticateToken,
+    authController.updateTargetScore
+);
+
+studentAuthRoutes.get(
+    "/profile",
+    authenticateToken,
+    authController.getProfile
 );
 
 export default studentAuthRoutes;

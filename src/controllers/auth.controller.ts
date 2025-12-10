@@ -226,5 +226,56 @@ export class AuthController {
         }
     );
 
+    /**
+     * Cập nhật điểm mục tiêu của user
+     */
+    updateTargetScore = asyncHandler(
+        async (req: Request, res: Response, next: NextFunction) => {
+            if (!req.user) {
+                throw AppError.unauthorizedError("Chưa xác thực");
+            }
+
+            const userInfo = req.user as JwtUserPayload;
+            const { target_score } = req.body;
+
+            if (!target_score || target_score < 0 || target_score > 990) {
+                throw AppError.badRequestError("Điểm mục tiêu không hợp lệ (0-990)");
+            }
+
+            const result = await this.authService.updateTargetScore(userInfo.id, target_score);
+
+            return res.status(200).json(
+                ResponseFormat.successResponse(
+                    result,
+                    "Cập nhật điểm mục tiêu thành công",
+                    200,
+                    req.requestId
+                )
+            );
+        }
+    );
+
+    /**
+     * Lấy thông tin profile của user
+     */
+    getProfile = asyncHandler(
+        async (req: Request, res: Response, next: NextFunction) => {
+            if (!req.user) {
+                throw AppError.unauthorizedError("Chưa xác thực");
+            }
+
+            const userInfo = req.user as JwtUserPayload;
+            const profile = await this.authService.getProfile(userInfo.id);
+
+            return res.status(200).json(
+                ResponseFormat.successResponse(
+                    profile,
+                    "Lấy thông tin profile thành công",
+                    200,
+                    req.requestId
+                )
+            );
+        }
+    );
 
 }
