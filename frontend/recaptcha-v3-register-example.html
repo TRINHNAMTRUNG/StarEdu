@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="vi">
+
+<head>
+    <meta charset="utf-8" />
+    <title>Register with Firebase Phone OTP</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 24px;
+            width: 420px;
+            border-radius: 12px;
+            box-shadow: 0 12px 30px rgba(0, 0, 0, .25);
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 4px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            background: #6b56e9;
+            color: white;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        button:hover:not(:disabled) {
+            background: #5a45d8;
+        }
+
+        #log {
+            margin-top: 15px;
+            background: #000000b0;
+            color: #0f0;
+            padding: 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        #recaptcha-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 12px;
+        }
+
+        .alert {
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h2>🔐 Đăng ký với OTP</h2>
+        <p style="color:#666;font-size:13px;margin-top:-6px;margin-bottom:12px">
+            Firebase Phone Auth – Client Flow
+        </p>
+
+        <div class="alert alert-warning">
+            ⚠️ <strong>Đang dùng Test Phone Number:</strong><br>
+            • Thêm <code>+84966970852</code> với code <code>123456</code> vào "Phone numbers for testing" trong Firebase
+            Console<br>
+            • SMS sẽ không được gửi thực sự, chỉ nhập OTP test
+        </div>
+
+        <form id="regForm">
+            <div class="form-group">
+                <label>Số điện thoại</label>
+                <input id="phone" value="0966970852" required>
+            </div>
+
+            <div class="form-group">
+                <label>Mật khẩu</label>
+                <input id="password" type="password" value="khang123@" required>
+            </div>
+
+            <div class="form-group">
+                <label>Họ và tên</label>
+                <input id="name" value="Nguyen Van A" required>
+            </div>
+
+            <div class="form-group">
+                <label>Giới tính</label>
+                <select id="gender">
+                    <option value="male">Nam</option>
+                    <option value="female">Nữ</option>
+                </select>
+            </div>
+
+            <button id="submitBtn" type="submit">Đăng ký và nhận OTP</button>
+        </form>
+
+        <div id="recaptcha-container"></div>
+        <div id="log"></div>
+    </div>
+
+    <!-- Firebase SDK compat -->
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+
+    <script>
+        // =======================
+        // 🔧 CONFIG
+        // =======================
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyAIkNpRY0qSU8P57vR3RbHNJ0LJfd8yS64",
+            authDomain: "newstaredu-8b53e.firebaseapp.com",
+            projectId: "newstaredu-8b53e",
+        };
+
+        const BACKEND_URL = "https://266564f8e10b.ngrok-free.app";
+        // =======================
+
+        // Initialize Firebase
+        firebase.initializeApp(FIREBASE_CONFIG);
+        const auth = firebase.auth();
+        auth.languageCode = 'vi'; // Set Vietnamese language
+
+        let recaptchaVerifier = null;
+        let confirmationResult = null;
+
+        const logEl = document.getElementById('log');
+        function log(msg) {
+            const t = new Date().toLocaleTimeString('vi-VN');
+            logEl.innerText += `[${t}] ${msg}\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(msg);
+        }
+
+        function normalizePhone(v) {
+            v = v.trim();
+            if (v.startsWith('+')) return v;
+            if (v.startsWith('0')) return '+84' + v.slice(1);
+            return v;
+        }
+
+        // Initialize reCAPTCHA when page loads
+        function initRecaptcha() {
+            if (recaptchaVerifier) {
+                recaptchaVerifier.clear();
+            }
+
+            recaptchaVerifier = new firebase.auth.RecaptchaVerifier(
+                'recaptcha-container',
+                {
+                    'size': 'normal', // Changed from 'invisible' to 'normal' for debugging
+                    'callback': (response) => {
+                        log('✅ reCAPTCHA verified');
+                    },
+                    'expired-callback': () => {
+                        log('❌ reCAPTCHA expired, please refresh');
+                    }
+                }
+            );
+
+            recaptchaVerifier.render().then((widgetId) => {
+                log('✅ reCAPTCHA initialized successfully');
+            }).catch((error) => {
+                log('❌ reCAPTCHA init failed: ' + error.message);
+            });
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            log('Initializing reCAPTCHA...');
+            initRecaptcha();
+        });
+
+        document.getElementById('regForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerText = '⏳ Đang xử lý...';
+
+            log('Bắt đầu flow đăng ký...');
+
+            try {
+                const phone = normalizePhone(document.getElementById('phone').value);
+                const password = document.getElementById('password').value;
+                const name = document.getElementById('name').value;
+                const gender = document.getElementById('gender').value;
+
+                log(`Gửi OTP tới ${phone}`);
+
+                // Ensure recaptcha is initialized
+                if (!recaptchaVerifier) {
+                    throw new Error('reCAPTCHA chưa được khởi tạo');
+                }
+
+                // **STEP 1 — Gửi OTP**
+                confirmationResult = await auth.signInWithPhoneNumber(
+                    phone,
+                    recaptchaVerifier
+                );
+
+                log('📩 Firebase đã gửi SMS OTP.');
+
+                // Nhập OTP
+                const otp = window.prompt('Nhập OTP nhận được (6 số):');
+                if (!otp || otp.length !== 6) {
+                    throw new Error("OTP không hợp lệ (phải là 6 số)");
+                }
+
+                log('Đang xác thực OTP...');
+
+                // **STEP 2 — Verify OTP**
+                const userCredential = await confirmationResult.confirm(otp);
+                log('✔ OTP xác thực thành công.');
+
+                // **STEP 3 — Lấy idToken**
+                const idToken = await userCredential.user.getIdToken();
+                log('🔑 Lấy Firebase ID token thành công.');
+
+                // **STEP 4 — Gửi lên backend**
+                log('Gửi dữ liệu sang backend...');
+
+                const resp = await fetch(BACKEND_URL + "/api/student/auth/register", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        phone,
+                        password,
+                        name,
+                        gender,
+                        firebaseIdToken: idToken
+                    }),
+                });
+
+                const data = await resp.json();
+                log('📬 Backend trả về: ' + JSON.stringify(data, null, 2));
+
+                if (!resp.ok) {
+                    throw new Error(data.message || 'Backend error');
+                }
+
+                alert("✅ Đăng ký thành công!");
+
+                // Reset form
+                document.getElementById('regForm').reset();
+
+            } catch (err) {
+                console.error(err);
+                log("❌ Lỗi: " + err.message);
+                alert('Lỗi: ' + err.message);
+
+                // Reinitialize reCAPTCHA on error
+                log('Đang khởi tạo lại reCAPTCHA...');
+                initRecaptcha();
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Đăng ký và nhận OTP';
+            }
+        });
+    </script>
+
+</body>
+
+</html>

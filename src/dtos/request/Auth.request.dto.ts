@@ -1,4 +1,4 @@
-import { IsArray, IsEnum, IsMongoId, IsNotEmpty, IsNumber, IsOptional, IsPhoneNumber, IsString, IsUrl, Length, Matches } from "class-validator";
+import { IsArray, IsEnum, IsMongoId, IsNotEmpty, IsNumber, IsOptional, IsPhoneNumber, IsString, IsUrl, Length, Matches, MaxLength } from "class-validator";
 import { UserBaseReqDto } from "../UserBase";
 import { PickType } from "@nestjs/mapped-types";
 import { Gender } from "../../models/user.model";
@@ -38,21 +38,14 @@ export class LoginReqDto extends PickType(UserBaseReqDto, [
  */
 
 // /student/register
-export class StudentRegisterReqDto extends PickType(UserBaseReqDto, [
-    'avatar',
-    'password',
-    'phone',
-    'name',
-    'gender',
-] as const) {
+export class StudentRegisterReqDto {
     @IsNotEmpty()
     @IsString()
-    @Length(6, 100)
-    password!: string;
+    phone!: string;
 
     @IsNotEmpty()
-    @IsPhoneNumber("VN")
-    phone!: string;
+    @IsString()
+    password!: string;
 
     @IsNotEmpty()
     @IsString()
@@ -61,20 +54,21 @@ export class StudentRegisterReqDto extends PickType(UserBaseReqDto, [
     @IsNotEmpty()
     @IsEnum(Gender)
     gender!: Gender;
+
+    // ID token returned by Firebase client after confirm(code)
+    @IsNotEmpty()
+    @IsString()
+    firebaseIdToken!: string;
 }
 
 // /student/verify-account
-export class VerifyOtpReqDto extends PickType(UserBaseReqDto, [
-    'phone'
-]) {
+export class VerifyOtpReqDto {
     @IsNotEmpty()
-    @IsPhoneNumber("VN")
+    @IsString()
     phone!: string;
 
     @IsNotEmpty()
     @IsString()
-    @Length(4, 4)
-    @Matches(/^\d{4}$/, { message: "Mã OTP phải gồm đúng 4 chữ số" })
     code!: string;
 }
 

@@ -18,11 +18,6 @@ studentAuthRoutes.post(
     authController.registerStudentByPhone
 );
 
-studentAuthRoutes.post(
-    "/verify-account",
-    validationBody(VerifyOtpReqDto),
-    authController.verifyStudentOtp
-);
 
 studentAuthRoutes.post(
     "/login",
