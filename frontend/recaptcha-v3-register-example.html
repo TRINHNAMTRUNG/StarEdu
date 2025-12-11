@@ -179,6 +179,7 @@
 
         function normalizePhone(v) {
             v = v.trim();
+            // Chuyển sang E.164 để gửi Firebase (bắt buộc)
             if (v.startsWith('+')) return v;
             if (v.startsWith('0')) return '+84' + v.slice(1);
             return v;
@@ -226,21 +227,22 @@
             log('Bắt đầu flow đăng ký...');
 
             try {
-                const phone = normalizePhone(document.getElementById('phone').value);
+                const phoneInput = document.getElementById('phone').value.trim();
+                const phoneE164 = normalizePhone(phoneInput); // Firebase cần +84...
                 const password = document.getElementById('password').value;
                 const name = document.getElementById('name').value;
                 const gender = document.getElementById('gender').value;
 
-                log(`Gửi OTP tới ${phone}`);
+                log(`Gửi OTP tới ${phoneE164}`);
 
                 // Ensure recaptcha is initialized
                 if (!recaptchaVerifier) {
                     throw new Error('reCAPTCHA chưa được khởi tạo');
                 }
 
-                // **STEP 1 — Gửi OTP**
+                // **STEP 1 — Gửi OTP (Firebase yêu cầu E.164)**
                 confirmationResult = await auth.signInWithPhoneNumber(
-                    phone,
+                    phoneE164,
                     recaptchaVerifier
                 );
 
@@ -262,14 +264,14 @@
                 const idToken = await userCredential.user.getIdToken();
                 log('🔑 Lấy Firebase ID token thành công.');
 
-                // **STEP 4 — Gửi lên backend**
+                // **STEP 4 — Gửi lên backend (GỬI SỐ GỐC 0966...)**
                 log('Gửi dữ liệu sang backend...');
 
                 const resp = await fetch(BACKEND_URL + "/api/student/auth/register", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        phone,
+                        phone: phoneInput, // GỬI SỐ GỐC 0966970852
                         password,
                         name,
                         gender,

@@ -76,6 +76,8 @@ interface OutputPhoneme {
     altPh?: string; // âm người dùng nói khác target
     diff?: number; // độ khác biệt giữa target và alt
     feedback: string; // lời khuyên
+    category?: string; // Phân loại chi tiết (VD: "Phụ âm chặn vô thanh")
+    audioUrl?: string; // URL audio mẫu để nghe cách phát âm chuẩn
     NBestPhonemes?: RawNBestPhoneme[]; // giữ nguyên mảng gốc để debug
 }
 
@@ -101,186 +103,65 @@ interface NormalizedResult {
 /* Rule Map IPA → cách phát âm */
 /* ===================== */
 
-// Chỉ giữ hướng dẫn phát âm, không so sánh với âm khác
-//https://moonesl.vn/bang-phien-am-tieng-anh-my-ipa-moon-esl/#nguyen-am-r-poor-pr
-//https://www.englishclub.com/pronunciation/phonemic-chart-ia.php
-const IPA_RULE_MAP: Record<string, string> = {
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/pay.m4a?_=75
-     */
-    p: "Bật hơi mạnh hơn, không rung cổ họng.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/bay-1.m4a?_=76
-     */
-    b: "Thêm rung nhẹ ở cổ họng.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/two.m4a?_=77
-     */
-    t: "Không rung cổ họng, bật hơi mạnh hơn.",
-    /**
-     * src="https://moonesl.vn/wp-content/uploads/2021/07/do-1.m4a?_=78"
-     */
-    d: "Thêm rung cổ họng để khác /t/.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/came.m4a?_=79
-     */
-    k: "Không rung cổ họng, bật hơi mạnh hơn.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/game-1.m4a?_=80
-     */
-    g: "Thêm rung cổ họng khi phát âm.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/fine-1.m4a?_=81
-     */
-    f: "Cắn nhẹ môi dưới vào răng trên khi phát âm.",
-    /**
-     * src="https://moonesl.vn/wp-content/uploads/2021/07/vine.m4a?_=82"
-     */
-    v: "Thêm rung cổ họng khi phát âm.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/thank.m4a?_=83
-     */
-    θ: "Đưa lưỡi ra giữa hai hàm răng, thổi nhẹ.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/this.m4a?_=84
-     */
-    ð: "Giữ lưỡi giữa hai răng và rung cổ họng.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/sue-1.m4a?_=69
-     */
-    s: "Giữ luồng hơi hẹp, rõ nét.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/shoe.m4a?_=71
-     */
-    "ʃ": "Tròn môi nhẹ, đẩy hơi dài.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/zoo-1.m4a?_=70
-     */
-    z: "Thêm rung cổ họng khi phát âm.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/massage.m4a?_=72
-     */
-    "ʒ": "Thêm rung cổ họng, giữ lưỡi đúng vị trí.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/home.m4a?_=90
-     */
-    h: "Phát hơi nhẹ từ họng, không rung cổ họng.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/may-1.m4a?_=85
-     */
-    m: "Ngậm miệng, rung mũi khi phát âm.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/need.m4a?_=86
-     */
-    n: "Lưỡi chạm chân răng trên, hơi thoát qua mũi.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/sing.m4a?_=87
-     */
-    "ŋ": "Nâng phần sau lưỡi lên.",
-    /**
-     * src="https://moonesl.vn/wp-content/uploads/2021/07/lead.m4a?_=89"
-     */
-    l: "Đặt đầu lưỡi chạm nhẹ nướu.",
-    /**
-     * src="https://moonesl.vn/wp-content/uploads/2021/07/read.m4a?_=88"
-     */
-    r: "Cuộn đầu lưỡi nhẹ vào trong.",
-    /**
-     * src="https://moonesl.vn/wp-content/uploads/2021/07/wine-1.m4a?_=91"
-     */
-    w: "Làm tròn môi, không cắn môi.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/you.m4a?_=92
-     */
-    j: "Đặt đầu lưỡi gần vòm họng, phát âm nhẹ nhàng.",
-    /**
-     * src="https://moonesl.vn/wp-content/uploads/2021/07/chew.m4a?_=73"
-     */
-    "ʧ": "Thêm bật hơi nhẹ trước /ʃ/.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/job-1.m4a?_=74
-     */
-    "ʤ": "Thêm rung cổ họng.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/voice-004-1.m4a?_=50
-     */
-    i: "Căng môi hơn, kéo dài âm.",
-    /**
-     * src="https://moonesl.vn/wp-content/uploads/2021/07/voice-003-1.m4a?_=49"
-     */
-    ɪ: "Thả lỏng môi, âm ngắn.",
-    /**
-     * src="https://moonesl.vn/wp-content/uploads/2021/07/bed.m4a?_=51"
-     */
-    e: "Hạ hàm ít hơn, tạo âm giữa /æ/ và /ɪ/.",
-    /**
-     * src="https://moonesl.vn/wp-content/uploads/2021/07/bad.m4a?_=52"
-     */
-    æ: "Hạ hàm nhiều hơn, mở miệng rộng.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/voice-002-1.m4a?_=48
-     */
-    ʌ: "Giữ miệng mở, phát âm mạnh hơn.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/voice-001-1.m4a?_=47
-     */
-    ə: "Giảm lực, nhẹ giọng hơn.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/voice-007-1.m4a?_=53
-     */
-    ɑ: "Mở rộng miệng, hạ hàm sâu.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/voice-008-1.m4a?_=54
-     */
-    ɔ: "Tròn môi hơn.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/voice-007-1.m4a?_=53
-     */
-    ɒ: "Không tròn môi, mở rộng miệng.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/put.m4a?_=55
-     */
-    ʊ: "Rút lưỡi về sau.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/moon.m4a?_=56
-     */
-    u: "Kéo dài âm, tròn môi hơn.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/voice-016-1.m4a?_=62
-     */
-    ɜ: "Giữ lưỡi giữa, phát âm dài hơn.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/voice-015-1.m4a?_=58
-     */
-    eɪ: "Kéo dài âm, kết thúc bằng âm /ɪ/ nhẹ.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/my.m4a?_=57
-     */
-    aɪ: "Kéo âm lên cao thành /ɪ/ ở cuối.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/voice-013-1.m4a?_=61
-     */
-    ɔɪ: "Kết thúc bằng âm /ɪ/ ngắn, tròn môi nhẹ.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/how.m4a?_=59
-     */
-    aʊ: "Kéo về phía sau và tròn môi để tạo /ʊ/ ở cuối.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/so.m4a?_=60
-     */
-    oʊ: "Bắt đầu tròn môi nhẹ và kết thúc bằng /ʊ/.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/voice-022-1.m4a?_=68
-     */
-    eə: "Kéo dài âm và thêm nhẹ /ə/ ở cuối.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/voice-021-1.m4a?_=67
-     */
-    ɪə: "Kéo dài âm và thêm /ə/ nhẹ ở cuối.",
-    /**
-     * https://moonesl.vn/wp-content/uploads/2021/07/voice-020-1.m4a?_=66
-     */
-    ʊə: "Giữ âm dài, mở nhẹ miệng về /ə/."
+type IPAEntry = {
+    type: 'Vowel' | 'Consonant'; // Loại: Nguyên âm hoặc Phụ âm
+    category: string; // Phân loại chi tiết (VD: "Phụ âm chặn vô thanh")
+    instruction: string; // Hướng dẫn cách phát âm
+    audioUrl: string; // URL file audio mẫu
+};
+
+const IPA_FULL_MAP: Record<string, IPAEntry> = {
+    // Phụ âm
+    p: { type: "Consonant", category: "Phụ âm chặn vô thanh", instruction: "Bật hơi mạnh hơn, không rung cổ họng.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/pay.m4a" },
+    b: { type: "Consonant", category: "Phụ âm chặn hữu thanh", instruction: "Thêm rung nhẹ ở cổ họng.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/bay-1.m4a" },
+    t: { type: "Consonant", category: "Phụ âm chặn vô thanh", instruction: "Không rung cổ họng, bật hơi mạnh hơn.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/two.m4a" },
+    d: { type: "Consonant", category: "Phụ âm chặn hữu thanh", instruction: "Thêm rung cổ họng để khác /t/.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/do-1.m4a" },
+    k: { type: "Consonant", category: "Phụ âm chặn vô thanh", instruction: "Không rung cổ họng, bật hơi mạnh hơn.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/came.m4a" },
+    g: { type: "Consonant", category: "Phụ âm chặn hữu thanh", instruction: "Thêm rung cổ họng khi phát âm.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/game-1.m4a" },
+    f: { type: "Consonant", category: "Phụ âm xát vô thanh", instruction: "Cắn nhẹ môi dưới vào răng trên khi phát âm.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/fine-1.m4a" },
+    v: { type: "Consonant", category: "Phụ âm xát hữu thanh", instruction: "Thêm rung cổ họng khi phát âm.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/vine.m4a" },
+    θ: { type: "Consonant", category: "Phụ âm xát vô thanh", instruction: "Đưa lưỡi ra giữa hai hàm răng, thổi nhẹ.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/thank.m4a" },
+    ð: { type: "Consonant", category: "Phụ âm xát hữu thanh", instruction: "Giữ lưỡi giữa hai răng và rung cổ họng.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/this.m4a" },
+    s: { type: "Consonant", category: "Phụ âm xát vô thanh", instruction: "Giữ luồng hơi hẹp, rõ nét.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/sue-1.m4a" },
+    z: { type: "Consonant", category: "Phụ âm xát hữu thanh", instruction: "Thêm rung cổ họng khi phát âm.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/zoo-1.m4a" },
+    ʃ: { type: "Consonant", category: "Phụ âm xát vô thanh", instruction: "Tròn môi nhẹ, đẩy hơi dài.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/shoe.m4a" },
+    ʒ: { type: "Consonant", category: "Phụ âm xát hữu thanh", instruction: "Thêm rung cổ họng, giữ lưỡi đúng vị trí.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/massage.m4a" },
+    h: { type: "Consonant", category: "Phụ âm xát", instruction: "Phát hơi nhẹ từ họng, không rung cổ họng.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/home.m4a" },
+    m: { type: "Consonant", category: "Phụ âm mũi", instruction: "Ngậm miệng, rung mũi khi phát âm.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/may-1.m4a" },
+    n: { type: "Consonant", category: "Phụ âm mũi", instruction: "Lưỡi chạm chân răng trên, hơi thoát qua mũi.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/need.m4a" },
+    ŋ: { type: "Consonant", category: "Phụ âm mũi", instruction: "Nâng phần sau lưỡi lên.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/sing.m4a" },
+    l: { type: "Consonant", category: "Phụ âm bên", instruction: "Đặt đầu lưỡi chạm nhẹ nướu.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/lead.m4a" },
+    r: { type: "Consonant", category: "Phụ âm rung", instruction: "Cuộn đầu lưỡi nhẹ vào trong.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/read.m4a" },
+    w: { type: "Consonant", category: "Phụ âm bán nguyên âm", instruction: "Làm tròn môi, không cắn môi.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/wine-1.m4a" },
+    j: { type: "Consonant", category: "Phụ âm bán nguyên âm", instruction: "Đặt đầu lưỡi gần vòm họng, phát âm nhẹ nhàng.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/you.m4a" },
+    ʧ: { type: "Consonant", category: "Phụ âm tắc xát vô thanh", instruction: "Thêm bật hơi nhẹ trước /ʃ/.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/chew.m4a" },
+    ʤ: { type: "Consonant", category: "Phụ âm tắc xát hữu thanh", instruction: "Thêm rung cổ họng.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/job-1.m4a" },
+
+    // Nguyên âm đơn
+    i: { type: "Vowel", category: "Nguyên âm đơn dài", instruction: "Căng môi hơn, kéo dài âm.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/voice-004-1.m4a" },
+    ɪ: { type: "Vowel", category: "Nguyên âm đơn ngắn", instruction: "Thả lỏng môi, âm ngắn.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/voice-003-1.m4a" },
+    e: { type: "Vowel", category: "Nguyên âm đơn ngắn", instruction: "Hạ hàm ít hơn, tạo âm giữa /æ/ và /ɪ/.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/bed.m4a" },
+    æ: { type: "Vowel", category: "Nguyên âm đơn ngắn", instruction: "Hạ hàm nhiều hơn, mở miệng rộng.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/bad.m4a" },
+    ʌ: { type: "Vowel", category: "Nguyên âm đơn ngắn", instruction: "Giữ miệng mở, phát âm mạnh hơn.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/voice-002-1.m4a" },
+    ə: { type: "Vowel", category: "Nguyên âm schwa", instruction: "Giảm lực, nhẹ giọng hơn.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/voice-001-1.m4a" },
+    ɑ: { type: "Vowel", category: "Nguyên âm đơn dài", instruction: "Mở rộng miệng, hạ hàm sâu.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/voice-007-1.m4a" },
+    ɔ: { type: "Vowel", category: "Nguyên âm đơn dài", instruction: "Tròn môi hơn.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/voice-008-1.m4a" },
+    ɒ: { type: "Vowel", category: "Nguyên âm đơn ngắn (BrE)", instruction: "Không tròn môi, mở rộng miệng.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/voice-009-1.m4a" },
+    ʊ: { type: "Vowel", category: "Nguyên âm đơn ngắn", instruction: "Rút lưỡi về sau.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/put.m4a" },
+    u: { type: "Vowel", category: "Nguyên âm đơn dài", instruction: "Kéo dài âm, tròn môi hơn.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/moon.m4a" },
+    ɜ: { type: "Vowel", category: "Nguyên âm đơn dài", instruction: "Giữ lưỡi giữa, phát âm dài hơn.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/voice-016-1.m4a" },
+
+    // Nguyên âm đôi
+    eɪ: { type: "Vowel", category: "Nguyên âm đôi", instruction: "Kéo dài âm, kết thúc bằng âm /ɪ/ nhẹ.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/voice-015-1.m4a" },
+    aɪ: { type: "Vowel", category: "Nguyên âm đôi", instruction: "Kéo âm lên cao thành /ɪ/ ở cuối.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/my.m4a" },
+    ɔɪ: { type: "Vowel", category: "Nguyên âm đôi", instruction: "Kết thúc bằng âm /ɪ/ ngắn, tròn môi nhẹ.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/voice-013-1.m4a" },
+    aʊ: { type: "Vowel", category: "Nguyên âm đôi", instruction: "Kéo về phía sau và tròn môi để tạo /ʊ/ ở cuối.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/how.m4a" },
+    oʊ: { type: "Vowel", category: "Nguyên âm đôi", instruction: "Bắt đầu tròn môi nhẹ và kết thúc bằng /ʊ/.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/so.m4a" },
+
+    // Nguyên âm ba (nguyên âm kép hướng tâm - giọng Anh - Anh)
+    ɪə: { type: "Vowel", category: "Nguyên âm ba", instruction: "Kéo dài âm và thêm /ə/ nhẹ ở cuối.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/voice-021-1.m4a" },
+    eə: { type: "Vowel", category: "Nguyên âm ba", instruction: "Kéo dài âm và thêm nhẹ /ə/ ở cuối.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/voice-022-1.m4a" },
+    ʊə: { type: "Vowel", category: "Nguyên âm ba", instruction: "Giữ âm dài, mở nhẹ miệng về /ə/.", audioUrl: "https://moonesl.vn/wp-content/uploads/2021/07/voice-020-1.m4a" },
 };
 
 /* ===================== */
@@ -297,12 +178,14 @@ const classifyDiff = (diff: number) =>
 /* Tạo feedback cho 1 phoneme */
 /* ===================== */
 function makeFeedback(target: string, alt: string | undefined, diff: number | undefined, result: string): string {
-    const rule = IPA_RULE_MAP[target];
-    if (result === "perfect") return `Phát âm /${target}/ rất tốt. ${rule ?? ""}`;
-    if (result === "near_correct") return `Âm /${target}/ hơi đúng. ${rule ?? ""}`;
-    if (result === "medium") return `Âm /${target}/ cần luyện thêm. ${rule ?? ""}`;
+    const entry = IPA_FULL_MAP[target];
+    const instruction = entry?.instruction ?? "";
+
+    if (result === "perfect") return `Phát âm /${target}/ rất tốt. ${instruction}`;
+    if (result === "near_correct") return `Âm /${target}/ hơi đúng. ${instruction}`;
+    if (result === "medium") return `Âm /${target}/ cần luyện thêm. ${instruction}`;
     // Nếu phát âm sai hoàn toàn
-    return `Bạn đang nói /${alt ?? "?"}/ thay vì /${target}/. ${rule ?? ""}`;
+    return `Bạn đang nói /${alt ?? "?"}/ thay vì /${target}/. ${instruction}`;
 }
 
 /* ===================== */
@@ -313,12 +196,19 @@ function analyzePhoneme(p: RawPhoneme): OutputPhoneme {
     const accuracy = p.PronunciationAssessment?.AccuracyScore ?? 0;
     const nbest = p.PronunciationAssessment?.NBestPhonemes ?? [];
 
+    // Lấy metadata từ IPA_FULL_MAP
+    const entry = IPA_FULL_MAP[target];
+    const category = entry?.category;
+    const audioUrl = entry?.audioUrl;
+
     if (accuracy >= PERFECT) {
         return {
             target,
             accuracy,
             result: "perfect",
             feedback: `Phát âm /${target}/ rất tốt.`,
+            category,
+            audioUrl,
             NBestPhonemes: nbest
         };
     }
@@ -329,6 +219,8 @@ function analyzePhoneme(p: RawPhoneme): OutputPhoneme {
             accuracy,
             result: "wrong",
             feedback: "Cần cải thiện phát âm.",
+            category,
+            audioUrl,
             NBestPhonemes: []
         };
     }
@@ -365,6 +257,8 @@ function analyzePhoneme(p: RawPhoneme): OutputPhoneme {
         altPh: alt !== target ? alt : undefined,
         diff: alt !== target ? Math.round(diff) : undefined,
         feedback,
+        category,
+        audioUrl,
         NBestPhonemes: nbest
     };
 }
@@ -463,7 +357,7 @@ class AzurePronunciationService {
         };
     }
 
-    /* Convert audio → PCM 16kHz mono */
+    /* Chuyển đổi audio thành định dạng PCM 16kHz mono */
     private async ensurePCM16Mono16k(buffer: Buffer): Promise<Buffer> {
         const input = path.join(tmpdir(), `input_${Date.now()}.wav`);
         const output = path.join(tmpdir(), `output_${Date.now()}.wav`);
@@ -484,7 +378,7 @@ class AzurePronunciationService {
         });
     }
 
-    /* Biến Buffer → AudioConfig cho SDK */
+    /* Biến Buffer thành AudioConfig cho SDK */
     private createAudioConfigFromBuffer(buffer: Buffer): speechsdk.AudioConfig {
         let pos = 0;
         const callback: speechsdk.PullAudioInputStreamCallback = {

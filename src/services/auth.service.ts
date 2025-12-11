@@ -18,7 +18,7 @@ class AuthService {
         // private infobipService: InfobipService,
         private studentService: StudentService,
         private teacherService: TeacherService, // Inject TeacherService
-        private firebaseAuthService: FirebaseAuthService // <-- injected Firebase service
+        private firebaseAuthService: FirebaseAuthService // Inject Firebase service
     ) { }
 
     /**
@@ -32,18 +32,18 @@ class AuthService {
         let { phone, password, name, gender } = userInfo;
 
         // Kiểm tra student đã đăng kí tài khoản chưa
-        let hasAccount = await UserModel.findOne({ phone: formatToE164(phone) });
+        let hasAccount = await UserModel.findOne({ phone });
         if (hasAccount) {
             throw AppError.conflictError("Số điện thoại đã được sử dụng");
         }
 
-        // Ensure firebaseIdToken provided
+        // Đảm bảo có firebaseIdToken
         const firebaseIdToken = (userInfo as any).firebaseIdToken;
         if (!firebaseIdToken) {
             throw AppError.badRequestError("Thiếu firebaseIdToken từ client. FE phải gửi idToken sau khi xác thực OTP bằng Firebase client.");
         }
 
-        // VERIFY idToken with Firebase Admin
+        // XÁC THỰC idToken với Firebase Admin
         let decoded: any;
         try {
             decoded = await this.firebaseAuthService.verifyIdToken(firebaseIdToken);
@@ -52,33 +52,38 @@ class AuthService {
             throw err; // AppError từ service
         }
 
-        // Ensure phone in token matches provided phone (safety)
+        // Đảm bảo phone trong token khớp với phone gửi lên (an toàn)
+        // Firebase trả về phone dạng E.164 (+84...), ta cần chuẩn hóa để so sánh
         const tokenPhone = decoded.phone_number;
         if (!tokenPhone) {
             throw AppError.unauthorizedError("Firebase token không chứa phone number");
         }
-        const normalizedTokenPhone = formatToE164(tokenPhone);
-        const normalizedProvidedPhone = formatToE164(phone);
-        if (normalizedTokenPhone !== normalizedProvidedPhone) {
-            console.warn("Phone mismatch token vs provided:", normalizedTokenPhone, normalizedProvidedPhone);
+
+        // Chuẩn hóa tokenPhone từ +84966970852 về 0966970852 để so sánh
+        const normalizedTokenPhone = tokenPhone.startsWith('+84')
+            ? '0' + tokenPhone.slice(3)
+            : tokenPhone;
+
+        if (normalizedTokenPhone !== phone) {
+            console.warn("Phone mismatch token vs provided:", normalizedTokenPhone, phone);
             throw AppError.unauthorizedError("Số điện thoại trong Firebase token không khớp với số điện thoại gửi lên");
         }
 
-        // Now create user (only after token verified)
+        // Bây giờ tạo user (chỉ sau khi token đã được xác thực)
         const encryptedPassword = await encryptPassword(password);
         const account = await UserModel.create({
             name,
             password: encryptedPassword,
             role: UserRole.STUDENT,
-            phone: normalizedProvidedPhone,
+            phone, // Lưu số gốc dạng 0966970852
             gender,
             isVerified: true
         });
 
-        // create student record
+        // Tạo bản ghi student
         await this.studentService.createStudentWithUserId(account._id.toString(), Level.A1, 0);
 
-        // Return user + tokens (hide password)
+        // Trả về user + tokens (ẩn password)
         const userObj: any = account.toObject();
         userObj.password = undefined;
         return { ...userObj, ...generateTokens({ id: account._id.toString(), role: account.role }) };
@@ -311,17 +316,6 @@ class AuthService {
         };
     }
 
-}
-
-/* helper: normalize phone to E.164 for Vietnam */
-function formatToE164(phone: string): string {
-    if (!phone) return phone;
-    const cleaned = phone.trim();
-    if (cleaned.startsWith("+")) return cleaned;
-    if (cleaned.startsWith("0")) return `+84${cleaned.slice(1)}`;
-    if (cleaned.startsWith("84")) return `+${cleaned}`;
-    // fallback: assume local number
-    return `+${cleaned}`;
 }
 
 export default AuthService;
