@@ -31,8 +31,12 @@ class AuthService {
         console.log("Registering student:", userInfo);
         let { phone, password, name, gender } = userInfo;
 
+        // Chuẩn hóa phone về dạng local 0... để lưu DB
+        const localPhone = formatToLocal(phone);
+        console.log(`📱 Phone normalization: ${phone} → ${localPhone}`);
+
         // Kiểm tra student đã đăng kí tài khoản chưa
-        let hasAccount = await UserModel.findOne({ phone: formatToE164(phone) });
+        let hasAccount = await UserModel.findOne({ phone: localPhone });
         if (hasAccount) {
             throw AppError.conflictError("Số điện thoại đã được sử dụng");
         }
@@ -57,6 +61,8 @@ class AuthService {
         if (!tokenPhone) {
             throw AppError.unauthorizedError("Firebase token không chứa phone number");
         }
+        
+        // So sánh phone: Chuẩn hóa cả 2 về E.164 để compare
         const normalizedTokenPhone = formatToE164(tokenPhone);
         const normalizedProvidedPhone = formatToE164(phone);
         if (normalizedTokenPhone !== normalizedProvidedPhone) {
@@ -64,13 +70,13 @@ class AuthService {
             throw AppError.unauthorizedError("Số điện thoại trong Firebase token không khớp với số điện thoại gửi lên");
         }
 
-        // Now create user (only after token verified)
+        // Now create user (only after token verified) - LƯU DẠNG LOCAL 0...
         const encryptedPassword = await encryptPassword(password);
         const account = await UserModel.create({
             name,
             password: encryptedPassword,
             role: UserRole.STUDENT,
-            phone: normalizedProvidedPhone,
+            phone: localPhone, // ✅ Lưu dạng 0...
             gender,
             isVerified: true
         });
@@ -359,6 +365,30 @@ function formatToE164(phone: string): string {
     if (cleaned.startsWith("84")) return `+${cleaned}`;
     // fallback: assume local number
     return `+${cleaned}`;
+}
+
+/* helper: normalize phone to local format 0... */
+function formatToLocal(phone: string): string {
+    if (!phone) return phone;
+    const cleaned = phone.trim().replace(/[\s-().]/g, '');
+    
+    // Nếu bắt đầu bằng +84, chuyển về 0
+    if (cleaned.startsWith('+84')) {
+        return '0' + cleaned.substring(3);
+    }
+    
+    // Nếu bắt đầu bằng 84, chuyển về 0
+    if (cleaned.startsWith('84')) {
+        return '0' + cleaned.substring(2);
+    }
+    
+    // Nếu đã là 0, giữ nguyên
+    if (cleaned.startsWith('0')) {
+        return cleaned;
+    }
+    
+    // Mặc định thêm 0 phía trước
+    return '0' + cleaned;
 }
 
 export default AuthService;

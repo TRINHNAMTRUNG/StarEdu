@@ -3,6 +3,7 @@ import SectionProgressModel from "../models/sectionProgress.model";
 import SectionModel from "../models/section.model";
 import LessonModel from "../models/lesson.model";
 import StudentModel from "../models/student.model";
+import LearningSchedule from "../models/learningSchedule.model";
 import AppError from "../utils/AppError";
 import mongoose from "mongoose";
 
@@ -86,6 +87,14 @@ class SectionProgressService {
             { upsert: true, new: true }
         );
 
+        // Cập nhật learning schedule nếu hoàn thành
+        if (isCompleted) {
+            console.log(`📚 Section ${sectionId} completed by user ${userId}, updating schedule...`);
+            await this.updateScheduleCompletion(userId, sectionId);
+        } else {
+            console.log(`📝 Section ${sectionId} attempted but not completed (${scorePercentage}% < ${PASSING_SCORE}%)`);
+        }
+
         return {
             section_id: sectionId,
             total_questions: totalQuestions,
@@ -143,6 +152,10 @@ class SectionProgressService {
             { upsert: true, new: true }
         );
 
+        // Cập nhật learning schedule
+        console.log(`🎬 Video/mindmap ${sectionId} viewed by user ${userId}, updating schedule...`);
+        await this.updateScheduleCompletion(userId, sectionId);
+
         return {
             section_id: sectionId,
             is_viewed: true,
@@ -197,6 +210,46 @@ class SectionProgressService {
         }).lean();
 
         return progress || null;
+    }
+
+    /**
+     * Cập nhật learning schedule khi section được hoàn thành
+     */
+    private async updateScheduleCompletion(userId: string, sectionId: string) {
+        try {
+            console.log(`🔄 Attempting to update schedule for user ${userId}, section ${sectionId}`);
+            
+            const schedule = await LearningSchedule.findOne({ 
+                user_id: new mongoose.Types.ObjectId(userId),
+                'scheduled_lessons.section_id': new mongoose.Types.ObjectId(sectionId),
+                'scheduled_lessons.completed': false
+            });
+
+            if (!schedule) {
+                console.log(`⚠️ No schedule found for user ${userId} with incomplete section ${sectionId}`);
+                return;
+            }
+
+            console.log(`📋 Found schedule ${schedule._id}`);
+
+            const lessonIndex = schedule.scheduled_lessons.findIndex(
+                (lesson: any) => 
+                    lesson.section_id.toString() === sectionId && 
+                    !lesson.completed
+            );
+
+            if (lessonIndex !== -1) {
+                schedule.scheduled_lessons[lessonIndex].completed = true;
+                schedule.scheduled_lessons[lessonIndex].completed_at = new Date();
+                await schedule.save();
+                console.log(`✅ Updated schedule: Section ${sectionId} marked as completed`);
+            } else {
+                console.log(`⚠️ Section ${sectionId} not found in scheduled_lessons or already completed`);
+            }
+        } catch (error) {
+            console.error('❌ Error updating schedule completion:', error);
+            // Không throw error để không ảnh hưởng đến flow chính
+        }
     }
 }
 

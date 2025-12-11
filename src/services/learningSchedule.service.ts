@@ -30,6 +30,18 @@ class LearningScheduleService {
   async createSchedule(data: CreateScheduleInput): Promise<ILearningSchedule> {
     const { user_id, roadmap_ids, schedule_config } = data;
 
+    // Kiểm tra xem user đã có schedule chưa
+    const existingSchedule = await LearningSchedule.findOne({ 
+      user_id: new mongoose.Types.ObjectId(user_id) 
+    });
+
+    if (existingSchedule) {
+      console.log(`📋 User ${user_id} already has a schedule. Appending new roadmaps...`);
+      return await this.appendRoadmapsToSchedule(existingSchedule, roadmap_ids, schedule_config);
+    }
+
+    console.log(`✨ Creating new schedule for user ${user_id}`);
+
     // Lấy tất cả roadmaps và courses
     const roadmaps = await Roadmap.find({ 
       _id: { $in: roadmap_ids.map(id => new mongoose.Types.ObjectId(id)) }
@@ -64,6 +76,72 @@ class LearningScheduleService {
   }
 
   /**
+   * Append roadmaps mới vào schedule hiện có
+   */
+  private async appendRoadmapsToSchedule(
+    schedule: ILearningSchedule,
+    newRoadmapIds: string[],
+    scheduleConfig?: IScheduleConfig
+  ): Promise<ILearningSchedule> {
+    // Lọc ra các roadmap chưa có trong schedule
+    const existingRoadmapIds = schedule.roadmap_ids.map(id => id.toString());
+    const roadmapIdsToAdd = newRoadmapIds.filter(id => !existingRoadmapIds.includes(id));
+
+    if (roadmapIdsToAdd.length === 0) {
+      console.log('⚠️ All roadmaps already exist in schedule');
+      return schedule;
+    }
+
+    console.log(`➕ Adding ${roadmapIdsToAdd.length} new roadmaps to existing schedule`);
+
+    // Lấy roadmaps mới
+    const newRoadmaps = await Roadmap.find({ 
+      _id: { $in: roadmapIdsToAdd.map(id => new mongoose.Types.ObjectId(id)) }
+    }).populate('courses');
+
+    if (!newRoadmaps || newRoadmaps.length === 0) {
+      throw new Error('Không tìm thấy roadmaps mới');
+    }
+
+    // Sắp xếp theo target_score
+    newRoadmaps.sort((a, b) => a.target_score - b.target_score);
+
+    // Generate lessons cho roadmaps mới
+    const config = scheduleConfig || schedule.schedule_config;
+    const newLessons = await this.generateScheduledLessons(newRoadmaps, config);
+
+    // Tìm ngày bắt đầu cho roadmaps mới (sau ngày cuối cùng đã schedule)
+    const lastScheduledDate = schedule.scheduled_lessons.reduce((latest, lesson) => {
+      const lessonDate = new Date(lesson.scheduled_date);
+      return lessonDate > latest ? lessonDate : latest;
+    }, new Date());
+
+    // Adjust scheduled dates cho lessons mới
+    const nextDay = new Date(lastScheduledDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    nextDay.setHours(0, 0, 0, 0);
+
+    const dayOffset = Math.floor((nextDay.getTime() - new Date(config.start_date).getTime()) / (1000 * 60 * 60 * 24));
+
+    newLessons.forEach(lesson => {
+      const originalDate = new Date(lesson.scheduled_date);
+      const adjustedDate = new Date(originalDate);
+      adjustedDate.setDate(adjustedDate.getDate() + dayOffset);
+      lesson.scheduled_date = adjustedDate;
+    });
+
+    // Thêm roadmaps và lessons mới vào schedule
+    schedule.roadmap_ids.push(...roadmapIdsToAdd.map(id => new mongoose.Types.ObjectId(id)));
+    schedule.scheduled_lessons.push(...newLessons);
+    schedule.updated_at = new Date();
+
+    await schedule.save();
+
+    console.log(`✅ Successfully appended ${roadmapIdsToAdd.length} roadmaps and ${newLessons.length} lessons`);
+    return schedule;
+  }
+
+  /**
    * Generate danh sách lessons được schedule theo ngày
    */
   private async generateScheduledLessons(
@@ -72,9 +150,11 @@ class LearningScheduleService {
   ): Promise<IScheduledLesson[]> {
     const scheduledLessons: IScheduledLesson[] = [];
     const currentDate = new Date(config.start_date);
+    // Normalize to start of day to avoid time zone issues
+    currentDate.setHours(0, 0, 0, 0);
+    
     const minMinutes = config.min_hours_per_day * 60;
     const maxMinutes = config.max_hours_per_day * 60;
-    let dayOfWeek = currentDate.getDay();
 
     // Collect all sections từ các roadmaps (tuần tự)
     const allSections: any[] = [];
@@ -104,11 +184,24 @@ class LearningScheduleService {
     // Schedule sections vào các ngày
     let sectionIndex = 0;
     let orderInDay = 1;
+    let studyDaysThisWeek = 0;
+    let currentWeekStart = new Date(currentDate);
+    currentWeekStart.setDate(currentDate.getDate() - currentDate.getDay()); // Start of week (Sunday)
 
     while (sectionIndex < allSections.length) {
-      // Kiểm tra nếu là ngày học trong tuần
-      const studyDaysCount = Math.floor(dayOfWeek / 7 * config.days_per_week);
-      if (dayOfWeek > 0 && dayOfWeek <= config.days_per_week) {
+      // Reset counter khi sang tuần mới
+      const weekStart = new Date(currentDate);
+      weekStart.setDate(currentDate.getDate() - currentDate.getDay());
+      if (weekStart.getTime() !== currentWeekStart.getTime()) {
+        studyDaysThisWeek = 0;
+        currentWeekStart = weekStart;
+      }
+
+      // Kiểm tra nếu còn ngày học trong tuần và không phải Chủ nhật
+      const dayOfWeek = currentDate.getDay();
+      const canStudyToday = dayOfWeek !== 0 && studyDaysThisWeek < config.days_per_week;
+
+      if (canStudyToday) {
         let totalMinutes = 0;
 
         // Thêm sections vào ngày này
@@ -133,12 +226,12 @@ class LearningScheduleService {
           sectionIndex++;
         }
 
+        studyDaysThisWeek++;
         orderInDay = 1; // Reset order cho ngày mới
       }
 
       // Chuyển sang ngày tiếp theo
       currentDate.setDate(currentDate.getDate() + 1);
-      dayOfWeek = currentDate.getDay();
     }
 
     return scheduledLessons;
@@ -202,7 +295,7 @@ class LearningScheduleService {
   }
 
   /**
-   * Tự động reschedule các lessons chưa hoàn thành
+   * Tự động reschedule các lessons chưa hoàn thành (chạy hàng ngày)
    */
   async autoRescheduleIncomplete(schedule: ILearningSchedule): Promise<void> {
     const today = new Date();
@@ -217,41 +310,77 @@ class LearningScheduleService {
       return;
     }
 
-    // Tìm ngày học tiếp theo
+    console.log(`🔄 Rescheduling ${incompleteLessons.length} incomplete lessons for user ${schedule.user_id}`);
+
+    // Tìm ngày học tiếp theo (bắt đầu từ hôm nay)
     const nextStudyDate = this.getNextStudyDate(
-      new Date(),
+      today,
       schedule.schedule_config.days_per_week
     );
 
     // Reschedule các incomplete lessons
     const config = schedule.schedule_config;
+    const minMinutes = config.min_hours_per_day * 60;
     const maxMinutes = config.max_hours_per_day * 60;
     let currentDate = new Date(nextStudyDate);
+    let orderInDay = 1;
 
     for (const lesson of incompleteLessons) {
-      // Tính tổng minutes đã schedule trong ngày currentDate
+      // Tính tổng minutes đã schedule trong ngày currentDate (không bao gồm lesson đang xử lý)
       const lessonsOnDate = schedule.scheduled_lessons.filter(
-        l => new Date(l.scheduled_date).toDateString() === currentDate.toDateString()
+        l => l.section_id.toString() !== lesson.section_id.toString() &&
+             new Date(l.scheduled_date).toDateString() === currentDate.toDateString()
       );
-      const totalMinutes = lessonsOnDate.reduce((sum, l) => sum + l.estimated_duration, 0);
 
-      // Nếu vượt max, chuyển sang ngày tiếp theo
-      if (totalMinutes + lesson.estimated_duration > maxMinutes) {
+      const totalMinutesOnDate = lessonsOnDate.reduce(
+        (sum, l) => sum + l.estimated_duration, 
+        0
+      );
+
+      // Nếu ngày hiện tại đã đầy hoặc thêm lesson này vượt max, chuyển sang ngày tiếp theo
+      if (totalMinutesOnDate + lesson.estimated_duration > maxMinutes && 
+          totalMinutesOnDate >= minMinutes) {
         currentDate = this.getNextStudyDate(currentDate, config.days_per_week);
+        orderInDay = 1;
       }
 
-      // Update scheduled_date
-      const lessonIndex = schedule.scheduled_lessons.findIndex(
-        l => l.lesson_id.toString() === lesson.lesson_id.toString() && 
-             l.section_id.toString() === lesson.section_id.toString()
-      );
-      if (lessonIndex !== -1) {
-        schedule.scheduled_lessons[lessonIndex].scheduled_date = new Date(currentDate);
-      }
+      // Cập nhật scheduled_date và order
+      lesson.scheduled_date = new Date(currentDate);
+      lesson.order_in_day = orderInDay++;
     }
 
     schedule.last_rescheduled_at = new Date();
     await schedule.save();
+
+    console.log(`✅ Rescheduled incomplete lessons to start from ${nextStudyDate.toDateString()}`);
+  }
+
+  /**
+   * Reschedule tất cả schedules có auto_reschedule = true (chạy cron job hàng ngày)
+   */
+  async rescheduleAllPendingSchedules(): Promise<void> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const schedules = await LearningSchedule.find({
+      auto_reschedule: true,
+      'scheduled_lessons': {
+        $elemMatch: {
+          completed: false,
+          scheduled_date: { $lt: today }
+        }
+      }
+    });
+
+    console.log(`🔄 Found ${schedules.length} schedules with incomplete past lessons`);
+
+    for (const schedule of schedules) {
+      try {
+        await this.autoRescheduleIncomplete(schedule);
+      } catch (error) {
+        console.error(`Error rescheduling schedule ${schedule._id}:`, error);
+      }
+    }
   }
 
   /**
