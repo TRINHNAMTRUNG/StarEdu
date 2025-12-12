@@ -23,14 +23,14 @@ class FirebaseAuthService {
     }
 
     /**
-     * VERIFY FIREBASE ID TOKEN (server-side)
-     * Returns decoded token if valid, throws AppError.unauthorizedError on invalid token.
+     * XÁC THỰC FIREBASE ID TOKEN (phía server)
+     * Trả về token đã giải mã nếu hợp lệ, throw AppError.unauthorizedError nếu token không hợp lệ.
      */
     async verifyIdToken(idToken: string): Promise<DecodedIdToken> {
         try {
             if (!idToken) throw AppError.unauthorizedError("Missing Firebase ID token");
             const decoded = await this.auth.verifyIdToken(idToken);
-            // decoded contains uid and phone_number among other claims
+            // decoded chứa uid và phone_number cùng các claims khác
             return decoded;
         } catch (err: any) {
             console.error("❌ [FirebaseAuth] verifyIdToken error:", err?.message || err);

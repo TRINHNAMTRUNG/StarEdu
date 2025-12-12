@@ -18,7 +18,7 @@ class AuthService {
         // private infobipService: InfobipService,
         private studentService: StudentService,
         private teacherService: TeacherService, // Inject TeacherService
-        private firebaseAuthService: FirebaseAuthService // <-- injected Firebase service
+        private firebaseAuthService: FirebaseAuthService // Inject Firebase service
     ) { }
 
     /**
@@ -41,13 +41,13 @@ class AuthService {
             throw AppError.conflictError("Số điện thoại đã được sử dụng");
         }
 
-        // Ensure firebaseIdToken provided
+        // Đảm bảo có firebaseIdToken
         const firebaseIdToken = (userInfo as any).firebaseIdToken;
         if (!firebaseIdToken) {
             throw AppError.badRequestError("Thiếu firebaseIdToken từ client. FE phải gửi idToken sau khi xác thực OTP bằng Firebase client.");
         }
 
-        // VERIFY idToken with Firebase Admin
+        // XÁC THỰC idToken với Firebase Admin
         let decoded: any;
         try {
             decoded = await this.firebaseAuthService.verifyIdToken(firebaseIdToken);
@@ -56,7 +56,8 @@ class AuthService {
             throw err; // AppError từ service
         }
 
-        // Ensure phone in token matches provided phone (safety)
+        // Đảm bảo phone trong token khớp với phone gửi lên (an toàn)
+        // Firebase trả về phone dạng E.164 (+84...), ta cần chuẩn hóa để so sánh
         const tokenPhone = decoded.phone_number;
         if (!tokenPhone) {
             throw AppError.unauthorizedError("Firebase token không chứa phone number");
@@ -81,10 +82,10 @@ class AuthService {
             isVerified: true
         });
 
-        // create student record
+        // Tạo bản ghi student
         await this.studentService.createStudentWithUserId(account._id.toString(), Level.A1, 0);
 
-        // Return user + tokens (hide password)
+        // Trả về user + tokens (ẩn password)
         const userObj: any = account.toObject();
         userObj.password = undefined;
         return { ...userObj, ...generateTokens({ id: account._id.toString(), role: account.role }) };
