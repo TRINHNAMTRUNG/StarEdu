@@ -1196,11 +1196,13 @@ Email phản hồi của học sinh:
 "${responseEmail}"
 
 Yêu cầu:
-- Với mỗi tiêu chí: đưa "criterion", "score" (0-100) và "feedback" ngắn giải thích lý do.
-- Tính overall_score (0-100) theo cách hợp lý (ghi ngắn cách tính).
+- Với mỗi tiêu chí: đưa "criterion" BẰNG TIẾNG VIỆT, "score" (0-100) và "feedback" BẰNG TIẾNG VIỆT giải thích chi tiết lý do, điểm mạnh, điểm yếu, ví dụ cụ thể từ bài viết.
+- Tính overall_score (0-100) theo công thức trung bình cộng của 4 tiêu chí.
 - Dựa vào overall_score, xác định CEFR level (A1->C2).
-- Viết detailed_explanation: phân tích chi tiết điểm mạnh và điểm cần cải thiện (đoạn văn).
-- Viết conclusion: kết luận ngắn gọn, kèm khuyến khích tích cực cho học sinh.
+- Viết detailed_explanation BẰNG TIẾNG VIỆT: phân tích chi tiết từng khía cạnh (Task Fulfillment, Coherence, Grammar, Vocabulary), nêu rõ điểm tốt và cần cải thiện, kèm ví dụ cụ thể từ bài viết của học sinh.
+- Viết conclusion BẰNG TIẾNG VIỆT: kết luận ngắn gọn về mức độ hoàn thành email, điểm nổi bật, lời khuyên cải thiện và khuyến khích tích cực.
+
+QUAN TRỌNG: TẤT CẢ NỘI DUNG (criterion, feedback, detailed_explanation, conclusion) PHẢI BẰNG TIẾNG VIỆT để học sinh Việt Nam dễ hiểu.
 
 Trả về JSON theo schema đã nêu.
 `.trim();
