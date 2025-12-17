@@ -71,16 +71,12 @@ class PersonalVocabularyService {
                 throw AppError.badRequestError("Từ này đã có trong bộ từ của bạn");
             }
 
-            // Lấy nghĩa tiếng Việt từ collocation đầu tiên (nếu có)
-            const mainMeaning = llmData.collocations && llmData.collocations.length > 0 
-                ? llmData.collocations[0].meaning 
-                : "";
-
             // Tạo từ mới với thông tin từ Gemini
             const newWord = await PersonalVocabularyModel.create({
                 user_id: userId,
                 word: word.toLowerCase().trim(),
-                definition: mainMeaning, // Nghĩa tiếng Việt
+                definition: llmData.definition || "", // Nghĩa tiếng Anh
+                translation: llmData.translation || "", // Nghĩa tiếng Việt
                 example: llmData.examples && llmData.examples.length > 0 ? llmData.examples[0] : "",
                 phonetic: llmData.ipa || "",
                 audioUrl: audioUS_url, // Default US
@@ -166,7 +162,7 @@ class PersonalVocabularyService {
             return {
                 _id: word._id.toString(),
                 term: word.word,
-                mainMeaning: word.definition,
+                mainMeaning: word.translation || word.definition, // Ưu tiên nghĩa tiếng Việt
                 ipa: word.phonetic || "",
                 audioUS_url: word.audioUrl || "", // Default dùng audioUrl cho cả US/UK
                 audioUK_url: word.audioUrl || "",

@@ -5,6 +5,8 @@ import { injectable } from "tsyringe";
 
 export interface LLMContent {
     ipa: string;
+    definition: string; // Nghĩa tiếng Anh
+    translation: string; // Nghĩa tiếng Việt
     collocations: { phrase: string; meaning: string }[];
     examples: string[];
 }
@@ -33,6 +35,8 @@ class GeminiService {
                         isValid: { type: Type.BOOLEAN },
                         error: { type: Type.STRING },
                         ipa: { type: Type.STRING },
+                        definition: { type: Type.STRING },
+                        translation: { type: Type.STRING },
                         collocations: {
                             type: Type.ARRAY,
                             items: {
@@ -46,7 +50,7 @@ class GeminiService {
                         },
                         examples: { type: Type.ARRAY, items: { type: Type.STRING } },
                     },
-                    required: ["term", "isValid", "ipa", "collocations", "examples"],
+                    required: ["term", "isValid", "ipa", "definition", "translation", "collocations", "examples"],
                 },
             },
         },
@@ -75,6 +79,8 @@ class GeminiService {
             1. Kiểm tra xem từ có hợp lệ hay không. Nếu sai chính tả/vô nghĩa -> isValid=false.
             2. Nếu hợp lệ -> tạo:
             - ipa (phiên âm)
+            - definition (nghĩa tiếng Anh - English definition)
+            - translation (nghĩa tiếng Việt)
             - 3 collocation (phrase + nghĩa tiếng Việt)
             - 3 câu ví dụ gốc (không dùng collocation)
 
@@ -85,6 +91,8 @@ class GeminiService {
                 "term": "word1",
                 "isValid": true,
                 "ipa": "...",
+                "definition": "English meaning...",
+                "translation": "Nghĩa tiếng Việt...",
                 "collocations": [...],
                 "examples": [...]
                 },
@@ -126,6 +134,8 @@ class GeminiService {
                     term: result.term,
                     data: {
                         ipa: result.ipa || "",
+                        definition: result.definition || "",
+                        translation: result.translation || "",
                         collocations: result.collocations || [],
                         examples: result.examples || [],
                     },
