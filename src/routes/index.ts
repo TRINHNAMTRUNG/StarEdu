@@ -8,6 +8,7 @@ import momoWebhookRoutes from "./webhook/momo.routes"; // ✅ THÊM
 import roadmapRecommendationRoutes from "./roadmapRecommendation.route"; // ✅ THÊM
 import learningScheduleRoutes from "./learningSchedule.routes"; // ✅ THÊM
 import studentCourseRoutes from "./student/course.routes"; // ✅ THÊM public courses
+import personalVocabularyRoutes from "./personalVocabulary.routes"; // ✅ Personal Vocabulary
 
 const rootRouter = Router();
 
@@ -18,5 +19,6 @@ rootRouter.use("/webhooks/momo", momoWebhookRoutes); // ✅ THÊM
 rootRouter.use("/roadmaps", roadmapRecommendationRoutes); // ✅ THÊM gợi ý lộ trình
 rootRouter.use("/schedules", learningScheduleRoutes); // ✅ THÊM learning schedule
 rootRouter.use("/courses", studentCourseRoutes); // ✅ THÊM public courses alias
+rootRouter.use("/vocabulary/personal", personalVocabularyRoutes); // ✅ Personal Vocabulary
 
 export default rootRouter;

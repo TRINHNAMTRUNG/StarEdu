@@ -80,6 +80,14 @@ const UserSchema = new Schema({
         min: 0,
         max: 990,
         default: null
+    },
+    active_session_token: {
+        type: String,
+        default: null
+    },
+    last_device_info: {
+        type: String,
+        default: null
     }
     // otp: {
     //     type: OtpSchema

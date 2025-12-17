@@ -123,6 +123,12 @@ class AuthService {
 
         const tokens = generateTokens({ id: user._id.toString(), role: user.role });
 
+        // Lưu token mới và invalidate session cũ (single device login)
+        await UserModel.findByIdAndUpdate(user._id, {
+            active_session_token: tokens.access_token,
+            last_device_info: `Login at ${new Date().toISOString()}`
+        });
+
         return {
             ...user.toObject(),
             password: undefined,

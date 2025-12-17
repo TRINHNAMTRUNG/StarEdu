@@ -5,7 +5,7 @@ import { JwtUserPayload, verifyAccessToken } from "../utils/token.util";
 import { UserRole } from "../models/user.model";
 import UserModel from "../models/user.model";
 
-export const authenticateToken = (req: Request, res: Response, next: NextFunction) => {
+export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
         throw AppError.unauthorizedError("Token không tồn tại hoặc sai định dạng");
@@ -14,9 +14,24 @@ export const authenticateToken = (req: Request, res: Response, next: NextFunctio
     const token = authHeader.split(" ")[1];
     try {
         const payload = verifyAccessToken(token);
+        
+        // Check if this token is the active session
+        const user = await UserModel.findById(payload.id).select("+active_session_token");
+        if (!user) {
+            throw AppError.notFoundError("Tài khoản không tồn tại");
+        }
+        
+        // Kiểm tra xem token có phải là session active không
+        if (user.active_session_token && user.active_session_token !== token) {
+            throw AppError.unauthorizedError("SESSION_EXPIRED");
+        }
+        
         req.user = payload;
         next();
-    } catch (err) {
+    } catch (err: any) {
+        if (err.message === "SESSION_EXPIRED") {
+            return next(AppError.unauthorizedError("SESSION_EXPIRED"));
+        }
         return next(AppError.unauthorizedError("Token không hợp lệ hoặc đã hết hạn"));
     }
 };
