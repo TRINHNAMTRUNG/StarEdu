@@ -18,10 +18,10 @@ const envSchema = z.object({
     // TWILIO_PHONE_NUMBER: z.string().regex(/^\+84\d{9}$/),
     // TWILIO_VERIFY_SERVICE_SID: z.string().min(1),
 
-    INFOBIP_API_KEY: z.string().min(1),
-    INFOBIP_BASE_URL: z.string().url(),
-    INFOBIP_APP_ID: z.string().min(1),
-    INFOBIP_MSG_ID: z.string().min(1),
+    // INFOBIP_API_KEY: z.string().min(1),
+    // INFOBIP_BASE_URL: z.string().url(),
+    // INFOBIP_APP_ID: z.string().min(1),
+    // INFOBIP_MSG_ID: z.string().min(1),
 
     // --- THÔNG TIN GOOGLE GEMINI ---
     GEMINI_API_KEY: z.string().min(1),
